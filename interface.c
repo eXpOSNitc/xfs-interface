@@ -82,6 +82,23 @@ void runCommand(char command[])
 		createDisk(FORMAT);		
 	}
 	
+	else if (strcmp(name, "run") == 0)	//batch process commands from file
+	{
+		arg1 = strtok(NULL, " ");
+		FILE * fp = fopen(arg1, "r");
+		char * line = NULL;
+    	size_t len = 0;
+		if (fp == NULL) {
+  			printf("Unable to open file : %s\n", arg1);
+  		}
+  		else {
+			while (getline(&line, &len, fp) != -1) {
+				if (line[strlen(line) - 1] == '\n') line[strlen(line) - 1] = '\0';
+				runCommand(line);
+			}
+			fclose(fp);
+  		}
+	}
 	else if (strcmp(name,"load")==0) 	//loads files to XFS disk.
 	{
 		int fd;
@@ -282,7 +299,7 @@ void runCommand(char command[])
 			fileName[50] = '\0';
 			copyBlocksToFile (startBlock,endBlock,fileName);
 		}	
-	}						
+	}
 	else if (strcmp(name,"exit")==0)		//Exits the interface
 		exit(0);
 	else
