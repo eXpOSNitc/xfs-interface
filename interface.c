@@ -59,14 +59,18 @@ void runCommand(char command[])
 		printf(" load --data <pathname> \n\t Loads a data file to XFS disk \n");
 		printf(" load --os  <pathname> \n\t Loads OS startup code to XFS disk \n");
 		printf(" load --int=timer <pathname>\n\t Loads Timer Interrupt routine to XFS disk \n");
-		printf(" load --int=[1-7] <pathname>\n\t Loads the specified Interrupt routine to XFS disk \n");
+		printf(" load --int=diskcontroller <pathname>\n\t Loads Disk Controller Interrupt routine to XFS disk \n");
+		printf(" load --int=console <pathname>\n\t Loads Console Interrupt routine to XFS disk \n");
+		printf(" load --int=[4-18] <pathname>\n\t Loads the specified Interrupt routine to XFS disk \n");
 		printf(" load --exhandler <pathname>  \n\t Loads exception handler routine to XFS disk \n");
 		printf(" rm --exec <xfs_filename>\n\t Removes an executable file from XFS disk \n");
 		printf(" rm --init <xfs_filename> \n\t Removes INIT code from XFS disk \n");
 		printf(" rm --data <xfs_filename>\n\t Removes a data file from XFS disk \n");
 		printf(" rm --os \n\t Removes OS startup code from XFS disk \n");
 		printf(" rm --int=timer \n\t Removes the Timer Interrupt routine from XFS disk \n");
-		printf(" rm --int=[1-7] \n\t Removes the specified Interrupt routine from XFS disk \n");
+		printf(" rm --int=diskcontroller \n\t Removes the Disk Controller Interrupt routine from XFS disk \n");
+		printf(" rm --int=console \n\t Removes the Console Interrupt routine from XFS disk \n");
+		printf(" rm --int=[4-18] \n\t Removes the specified Interrupt routine from XFS disk \n");
 		printf(" rm --exhandler\n\t Removes the exception handler routine from XFS disk \n");
 		printf(" ls \n\t List all files\n");
 		printf(" df \n\t Display free list and free space\n");
@@ -168,6 +172,14 @@ void runCommand(char command[])
 			if(strcmp(intType,"timer")==0)
 			{
 				loadTimerCode(fileName);
+			}
+			else if(strcmp(intType,"diskcontroller")==0)
+			{
+				loadDiskControllerIntCode(fileName);
+			}
+			else if(strcmp(intType,"console")==0)
+			{
+				loadConsoleIntCode(fileName);
 			}
 			else
 			{

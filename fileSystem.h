@@ -13,20 +13,38 @@ Declarations of Disk parameters
 
 #define BLOCK_SIZE 512
 #define WORD_SIZE 16
-#define OS_STARTUP_CODE 0
-#define EX_HANDLER 1
-#define TIMERINT 3
-#define INT1 5
-#define INT2 7
-#define INT3 9
-#define INT4 11
-#define INT5 13
-#define INT6 15
-#define INT7 17
+#define OS_STARTUP_CODE 1
+#define EX_HANDLER 2
+#define TIMERINT 4
+#define DISKCONTROLLER_INT 6
+#define CONSOLE_INT 8
+#define INT0 EX_HANDLER
+#define INT1 TIMERINT
+#define INT2 DISKCONTROLLER_INT
+#define INT3 CONSOLE_INT
+#define INT4 10
+#define INT5 12
+#define INT6 14
+#define INT7 16
+#define INT8 18
+#define INT9 20
+#define INT10 22
+#define INT11 24
+#define INT12 26
+#define INT13 28
+#define INT14 30
+#define INT15 32
+#define INT16 34
+#define INT17 36
+#define INT18 38
+
 
 #define OS_STARTUP_CODE_SIZE 1
 #define EX_HANDLER_SIZE 2
 #define TIMERINT_SIZE 2
+#define DISKCONTROLLER_INT_SIZE 2
+#define CONSOLE_INT_SIZE 2
+#define INT0_SIZE 2
 #define INT1_SIZE 2
 #define INT2_SIZE 2
 #define INT3_SIZE 2
@@ -34,21 +52,31 @@ Declarations of Disk parameters
 #define INT5_SIZE 2
 #define INT6_SIZE 2
 #define INT7_SIZE 2
-
-#define FAT 19
+#define INT8_SIZE 2
+#define INT9_SIZE 2
+#define INT10_SIZE 2
+#define INT11_SIZE 2
+#define INT12_SIZE 2
+#define INT13_SIZE 2
+#define INT14_SIZE 2
+#define INT15_SIZE 2
+#define INT16_SIZE 2
+#define INT17_SIZE 2
+#define INT18_SIZE 2
+#define FAT 40
 #define NO_OF_FAT_BLOCKS 1
 
-#define DISK_FREE_LIST 20
+#define DISK_FREE_LIST 41
 #define NO_OF_FREE_LIST_BLOCKS 1
 
-#define INIT_BASIC_BLOCK 21
+#define INIT_BASIC_BLOCK 42
 #define INIT_NAME "init.xsm"
 #define NO_OF_INIT_BLOCKS 3
 
-#define NO_OF_INTERRUPTS 7
+#define NO_OF_INTERRUPTS 18
 
-#define DATA_START_BLOCK 24
-#define NO_OF_DATA_BLOCKS 424
+#define DATA_START_BLOCK 45
+#define NO_OF_DATA_BLOCKS 404
 
 #define SWAP_START_BLOCK 448
 #define NO_OF_SWAP_BLOCKS 64
@@ -168,6 +196,10 @@ int loadIntCode(char* name, int intNo);
 */
 int loadTimerCode(char* name);
 
+int loadDiskControllerIntCode(char* name);
+
+int loadConsoleIntCode(char* name);
+
 /*
   This function copies the exception handler to the proper location on the disk.
 */
@@ -202,6 +234,11 @@ int deleteOSCodeFromDisk();
   This function deletes the Timer Interrupt from the disk.
 */
 int deleteTimerFromDisk();
+
+int deleteDiskControllerINTFromDisk();
+
+int deleteConsoleINTFromDisk();
+
 
 /*
   This function deletes the Interrupt <intNo> from the disk.

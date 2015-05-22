@@ -230,6 +230,23 @@ int deleteTimerFromDisk()
 	return 0;
 }
 
+int deleteDiskControllerINTFromDisk()
+{
+	emptyBlock(TEMP_BLOCK);
+	int i;
+	for (i=0;i<DISKCONTROLLER_INT_SIZE; i++)
+		writeToDisk(TEMP_BLOCK,DISKCONTROLLER_INT+i);
+	return 0;
+}
+
+int deleteConsoleINTFromDisk()
+{
+	emptyBlock(TEMP_BLOCK);
+	int i;
+	for (i=0;i<CONSOLE_INT_SIZE; i++)
+		writeToDisk(TEMP_BLOCK,CONSOLE_INT+i);
+	return 0;
+}
 /*
   This function deletes the Interrupt <intNo> from the disk.
 */
@@ -718,6 +735,61 @@ int loadOSCode(char* fileName){
 	return 0;
 }
 
+int loadDiskControllerIntCode(char* fileName)
+{
+	expandpath(fileName);
+	FILE* fp = fopen(fileName, "r");
+	int i,j;
+	if(fp == NULL)
+	{
+		printf("File %s not found.\n", fileName);
+		return -1;
+	}
+	
+	for(i=0;i<DISKCONTROLLER_INT_SIZE;i++)
+	{
+		j = writeFileToDisk(fp, DISKCONTROLLER_INT + i, ASSEMBLY_CODE);
+		if (j != 1)
+			break;
+	}
+	if(j==1)
+	{
+		printf("Disk Controller Interrupt Code exceeds %d block\n",DISKCONTROLLER_INT_SIZE);
+		deleteDiskControllerINTFromDisk();
+		//emptyBlock(TEMP_BLOCK);
+		//writeToDisk(TEMP_BLOCK,TIMERINT);
+	}
+	close(fp);
+	return 0;
+}
+
+int loadConsoleIntCode(char* fileName)
+{
+	expandpath(fileName);
+	FILE* fp = fopen(fileName, "r");
+	int i,j;
+	if(fp == NULL)
+	{
+		printf("File %s not found.\n", fileName);
+		return -1;
+	}
+	
+	for(i=0;i<CONSOLE_INT_SIZE;i++)
+	{
+		j = writeFileToDisk(fp, CONSOLE_INT + i, ASSEMBLY_CODE);
+		if (j != 1)
+			break;
+	}
+	if(j==1)
+	{
+		printf("Console Interrupt Code exceeds %d block\n",CONSOLE_INT);
+		deleteConsoleINTFromDisk();
+		//emptyBlock(TEMP_BLOCK);
+		//writeToDisk(TEMP_BLOCK,TIMERINT);
+	}
+	close(fp);
+	return 0;
+}
 
 /*
   This function copies the interrupts to the proper location on the disk.
