@@ -1,7 +1,247 @@
 #include <string.h>
 #include <libgen.h>
+
+/* For command completion. */
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "interface.h"
 
+/*
+ * Strip unwanted characters.
+ */
+char*
+xfs_cli_stripwhite (char *str)
+{
+	char *end;
+
+	end = str + strlen(str);
+	end--;
+
+	while (isspace(*str))
+		str++;
+
+	while (isspace(*end) && str <= end)
+		end--;
+
+	*++end = '\0';
+
+	return str;
+}
+
+/*
+ * Set up the auto-complete mechanism.
+ */
+ void
+ cli_init_completion ()
+ {
+ 	rl_readline_name = "xfs-interface";
+ 	rl_attempted_completion_function = xfs_cli_completion;
+ }
+
+/*
+ * The command line interface with command completion.
+ * Copyright (c) Kurian Jacob et al.
+ */
+void
+cli_run_with_completion ()
+{
+	char *line_read = NULL, *command;
+
+	while (1)
+	{
+		/* Return the memory to the pool if needed. */
+		if (line_read)
+		{
+			free (line_read);
+			line_read = NULL;
+		}
+
+		line_read = readline("# ");
+
+		if (!line_read)
+			continue;
+
+		command = xfs_cli_stripwhite (line_read);
+
+		/* Only whitespaces? */
+		if (!strlen(command))
+			continue;
+
+		add_history(command);
+
+		if (!strcmp(command, "exit"))
+			break;
+
+		runCommand(command);
+	}
+
+	return;
+}
+
+char**
+xfs_cli_completion(const char *text, int start, int end)
+{
+	char **matches;
+	char *curr_context;
+	char *pch;
+
+	curr_context = malloc(start + 1);
+	curr_context[0] = '\0';
+	strncpy (curr_context, rl_line_buffer, start);
+
+	pch = strtok(curr_context, " ");
+
+	matches = NULL;
+
+	rl_completion_append_character = ' ';
+
+	if (pch == NULL)
+		matches = rl_completion_matches (text, xfs_cli_command_gen);
+	else if (!strcmp(pch, "load"))
+	{
+		if (rl_line_buffer[start - 1] == '=')
+			matches = rl_completion_matches(text, xfs_cli_int_gen);
+		else if (!strtok(NULL, " "))
+			matches = rl_completion_matches(text, xfs_cli_opt_gen);
+	}
+	else if (!strcmp(pch, "rm"))
+	{
+		pch = strtok(NULL, " ");
+
+		if (!pch)
+			matches = rl_completion_matches(text, xfs_cli_opt_gen);
+		else if (rl_line_buffer[start - 1] == '=')
+			matches = rl_completion_matches(text, xfs_cli_int_gen);
+		else
+			matches = rl_completion_matches(text, xfs_cli_file_gen);
+	}
+	else if (!strcmp(pch, "cat"))
+	{
+		matches = rl_completion_matches(text, xfs_cli_file_gen);
+	}
+
+	free(curr_context);
+	return matches;
+}
+
+char*
+xfs_cli_command_gen (const char *text, int state)
+{
+	const char *commands[8]={"fdisk", "load", "rm", "ls", "cat", "copy", "exit", "help"};
+	static int index, len;
+	const int comm_len = 8;
+
+	if (state == 0)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	for (; index < comm_len; ++index)
+		if (!strncmp(text, commands[index], len))
+			return strdup(commands[index++]);
+
+	return NULL;
+}
+
+char*
+xfs_cli_opt_gen(const char *text, int state)
+{
+	const char *options[12] = {"--exec", "--int=", "--exhandler", "--os", "--data"};
+	static int index, len;
+	const int opt_len = 5;
+
+	if (state == 0)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	for (; index < opt_len; ++index)
+	{
+		if (!strncmp(text, options[index], len))
+		{
+			/* A bit of hacking, prevent readline from appending a space after possible --int=. */
+			if (index == 1)
+				rl_completion_append_character = '\0';
+			return strdup(options[index++]);
+		}
+	}
+
+	return NULL;
+}
+
+char*
+xfs_cli_int_gen (const char *text, int state)
+{
+	const char *ints[8]={"1", "2", "3", "4", "5", "6", "7", "timer"};
+	static int index, len;
+	const int ints_len = 8;
+
+	if (state == 0)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	for (; index < ints_len; ++index)
+		if (!strncmp(text, ints[index], len))
+			return strdup(ints[index++]);
+
+	return NULL;
+}
+
+static
+void
+xfs_cli_destroy_file_list(XOSFILE *files)
+{
+	XOSFILE *curr_ptr, *next_ptr;
+
+	curr_ptr = files;
+
+	while(curr_ptr)
+	{
+		free(curr_ptr->name);
+		next_ptr = curr_ptr->next;
+
+		free(curr_ptr);
+		curr_ptr = next_ptr;
+	}
+}
+
+char*
+xfs_cli_file_gen (const char *text, int state)
+{
+	static int i, j, len;
+	static XOSFILE *files;
+	char *result = NULL;
+	XOSFILE *next;
+
+	if (state == 0)
+	{
+		xfs_cli_destroy_file_list (files);
+		files = getAllFiles();
+		len = strlen(text);
+	}
+
+	while (files)
+	{
+		if (!strncmp(text, files->name, len))
+		{
+			result = strdup(files->name);
+		}
+
+		next = files->next;
+		free(files->name);
+		free(files);
+		files = next;
+
+		if (result)
+			break;
+	}
+
+	return result;
+}
 
 /* 
 Function to invoke Command Line interface 
@@ -25,20 +265,8 @@ void cli(int argc, char **argv)
 	else
 	{
 		printf("Unix-XFS Interace Version 1.0. \nType \"help\" for  getting a list of commands.\n");
-		while(1)
-		{
-			i=0;
-			printf("# ");
-			scanf("%c",&c);
-			while(c!='\n')
-			{  	
-				command[i++] = c;
-				scanf("%c",&c);
-			}
-			command[i] = '\0';
-			if(command[0]!='\0')
-					runCommand(command);
-		}
+		cli_init_completion();
+		cli_run_with_completion();
 	}
 }
 
@@ -283,8 +511,6 @@ void runCommand(char command[])
 			copyBlocksToFile (startBlock,endBlock,fileName);
 		}	
 	}						
-	else if (strcmp(name,"exit")==0)		//Exits the interface
-		exit(0);
 	else
 		printf("Unknown command \"%s\". See \"help\" for more information\n",name);
 }

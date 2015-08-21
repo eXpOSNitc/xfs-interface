@@ -3,37 +3,73 @@
 #include<stdlib.h>
 
 
+void
+listAllFiles ()
+{
+	XOSFILE *list, *next;
 
+	list = getAllFiles();
+
+	if (!list)
+	{
+		printf("The disk contains no file or the disk does not exist.\n");
+		return;
+	}
+
+	while (list)
+	{
+		printf ("Filename: %s Filesize %d\n", list->name, list->size);
+		next = list->next;
+
+		free (list->name);
+		free(list);
+		list = next;
+	}
+}
 /*
   This function lists all the files present on the disk.
   This is done as follows:
     1. The basic block entry in the memory copy of the disk is searched. If the value is not -1 then the filename is 
       shown as output.
 */
-void listAllFiles(){
+XOSFILE* getAllFiles(){
 	int fd;
 	fd = open(DISK_NAME, O_RDONLY, 0666);
 	if(fd < 0){
-	  printf("Unable to Open Disk File!\n");
-	  return;
+	  fprintf(stderr, "Unable to open disk file.\n");
+	  return NULL;
 	}
 	close(fd);
 	int i,j;
+	XOSFILE *list, *curr_ptr;
 	int hasFiles = 0; 	// Flag which indicates if disk has no files
+
+	/* The list works as a sentinel. */
+	list = malloc(sizeof(XOSFILE));
+	list->next = NULL;
+	curr_ptr = list;
+
 	for(j = FAT ; j < FAT + NO_OF_FAT_BLOCKS ; j++)
 	{
 		for(i = 0 ; i < BLOCK_SIZE ; i = i + FATENTRY_SIZE)
 		{
 			if( getValue(disk[j].word[i+FATENTRY_BASICBLOCK]) > 0 )	// Negative value indicates invalid FAT
 			{ 	hasFiles = 1;
-				printf("Filename: %s   Filesize: %d\n",disk[j].word[i+FATENTRY_FILENAME],getValue(disk[j].word[i+FATENTRY_FILESIZE]));
+				XOSFILE *new_entry;
+
+				new_entry = malloc (sizeof(XOSFILE));
+				new_entry->name = strdup(disk[j].word[i + FATENTRY_FILENAME]);
+				new_entry->size = getValue(disk[j].word[i + FATENTRY_FILESIZE]);
+				curr_ptr->next = new_entry;
+				curr_ptr = new_entry;
+				curr_ptr->next = NULL;
 			}		
 		}
 	}
-	if(!hasFiles)
-	{
-		printf("The disk contains no files!\n");
-	}
+	
+	curr_ptr = list->next;
+	free(list);
+	return curr_ptr;
 }
 
 
