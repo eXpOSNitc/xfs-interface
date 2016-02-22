@@ -83,19 +83,54 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 {
 	char line[ins_length];
 	char instr[XSM_WORD_SIZE];
-	char *label;
 	int address = 0;
+	const char *s = " ,"
+	char *opcode, *leftop, *rightop;
 	
 	fseek (fp, 0, SEEK_SET);
 	while (fgets(line, ins_length, fp))
 	{
-		sscanf (line, "%s", instr);
-		
-		if (!strcasecmp(instr, "JMP"))
-		{
-			if 
+		opcode = strtok (line, s);
+		leftop = strtok (NULL, s);
+		rightop = strtok (NULL, s);
+		if (!strcasecmp (opcode, "JMP") || !strcasecmp(opcode, "CALL")
+		{	
+			rightop = leftop;
+			leftop = "";
 		}
-	}			
+		else if (!strcasecmp(opcode, "JNZ") || !strcasecmp(opcode, "JZ"))
+		{
+			strcat (leftop, ", "); 
+		}
+		if (labels_is_charstring(rightop))
+		{
+			address = labels_get_target (rightop);
+			
+			if (address < 0)
+			{
+				fprintf (stderr, "Can not resolve label %s.\n", rightop);
+				return FALSE;
+			}
+			
+			fprintf (fout, "%s %s%d\n", opcode,leftop, address + base_address);
+		}
+	}
+	
+	return TRUE;			
 }
 
-
+int
+labels_is_charstring (char *str)
+{
+	char *p = str;
+	
+	while (*p)
+	{
+		if (isalpha(*p))
+			return TRUE;
+			
+		p++;
+	}
+	
+	return FALSE;
+}
