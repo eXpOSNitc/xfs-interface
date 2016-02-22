@@ -347,7 +347,7 @@ void runCommand(char command[])
 
 		char *int_command = strtok(arg1, "=");	
 		char *intType = strtok(NULL, "=");
-	    	char *fileName = arg2;;
+	    char *fileName = arg2;
 	    
 		if(fileName!=NULL)
 			fileName[50] = '\0';
@@ -355,7 +355,8 @@ void runCommand(char command[])
 		{
 			printf("Missing <pathname> for load. See \"help\" for more information\n");
 			return;
-		}				
+		}		
+				
 		if (strcmp(arg1,"--exec")==0)	
 		{
 			char *c;

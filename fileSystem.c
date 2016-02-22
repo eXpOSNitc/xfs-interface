@@ -706,11 +706,16 @@ int loadDataToDisk(char *name)
 /*
   This function copies the init program to its proper location on the disk.
 */
-int loadINITCode(char* fileName )
+int loadINITCode(char* infile )
 {
 	FILE * fp;
 	int i,j;
-	expandpath(fileName);
+	expandpath(infile);
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, INIT_BASIC_BLOCK * BLOCK_SIZE);
+	
 	fp = fopen(fileName, "r");
 	if(fp == NULL)
 	{
@@ -738,15 +743,22 @@ int loadINITCode(char* fileName )
 
 
 /*
-  This function loads the OS startup code specified by the first arguement to its appropriate location on disk.
+  This function loads the OS startup code specified by the first argument to its appropriate location on disk.
   The code is first copied to memory copy. If this copying proceeds properly then the memory copy is committed to the disk.
 */
-int loadOSCode(char* fileName){
+int loadOSCode(char* infile){
 
 	emptyBlock(TEMP_BLOCK);
 	writeToDisk(TEMP_BLOCK,OS_STARTUP_CODE);
-	expandpath(fileName);
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, OS_STARTUP_CODE * BLOCK_SIZE);
+	
 	FILE* fp = fopen(fileName, "r");
+	
 	int i,j;
 	if(fp == NULL)
 	{
@@ -771,9 +783,15 @@ int loadOSCode(char* fileName){
 	return 0;
 }
 
-int loadDiskControllerIntCode(char* fileName)
+int loadDiskControllerIntCode(char* infile)
 {
-	expandpath(fileName);
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, DISKCONTROLLER_INT * BLOCK_SIZE);
+	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)
@@ -799,9 +817,15 @@ int loadDiskControllerIntCode(char* fileName)
 	return 0;
 }
 
-int loadConsoleIntCode(char* fileName)
+int loadConsoleIntCode(char* infile)
 {
-	expandpath(fileName);
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, CONSOLE_INT * BLOCK_SIZE);
+	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)
@@ -830,9 +854,15 @@ int loadConsoleIntCode(char* fileName)
 /*
   This function copies the interrupts to the proper location on the disk.
 */
-int loadIntCode(char* fileName, int intNo)
+int loadIntCode(char* infile, int intNo)
 {
-	expandpath(fileName);
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, (((intNo - 1) * INT1_SIZE)  + INT1 )  * BLOCK_SIZE);
+	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)
@@ -862,9 +892,15 @@ int loadIntCode(char* fileName, int intNo)
 /*
   This function copies the timer interrupt to the proper location on the disk.
 */
-int loadTimerCode(char* fileName)
+int loadTimerCode(char* infile)
 {
-	expandpath(fileName);
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, TIMERINT * BLOCK_SIZE);
+	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)
@@ -893,9 +929,15 @@ int loadTimerCode(char* fileName)
 /*
   This function copies the exception handler to the proper location on the disk.
 */
-int loadExHandlerToDisk(char* fileName)
+int loadExHandlerToDisk(char* infile)
 {
-	expandpath(fileName);
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, EX_HANDLER * BLOCK_SIZE);
+	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)

@@ -22,7 +22,8 @@ labels_reset ()
 	_root = NULL;
 }
 
-int labels_phase_one(FILE *fp)
+int 
+labels_phase_one(FILE *fp)
 {
 	char instruction[ins_length];
 	char *label;
@@ -54,7 +55,7 @@ labels_is_label (const char *str)
 }
 
 char*
-labels_get_name (const char *label)
+labels_get_name (char *label)
 {
 	const char *delim = ":";
 	strtok (label, delim);
@@ -63,13 +64,13 @@ labels_get_name (const char *label)
 }
 
 void
-labels_insert (const char *label, int address)
+labels_insert (char *label_name, int address)
 {
 	label *ptr;
 	
 	ptr = (label *) malloc (sizeof(label));
 	
-	ptr->name = label;
+	ptr->name = label_name;
 	ptr->address = address;
 	
 	ptr->next = _root;	
@@ -84,16 +85,16 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 	char line[ins_length];
 	char instr[XSM_WORD_SIZE];
 	int address = 0;
-	const char *s = " ,"
+	const char *s = " ,";
 	char *opcode, *leftop, *rightop;
 	
-	fseek (fp, 0, SEEK_SET);
-	while (fgets(line, ins_length, fp))
+	fseek (fin, 0, SEEK_SET);
+	while (fgets(line, ins_length, fin))
 	{
 		opcode = strtok (line, s);
 		leftop = strtok (NULL, s);
 		rightop = strtok (NULL, s);
-		if (!strcasecmp (opcode, "JMP") || !strcasecmp(opcode, "CALL")
+		if (!strcasecmp (opcode, "JMP") || !strcasecmp(opcode, "CALL"))
 		{	
 			rightop = leftop;
 			leftop = "";
@@ -120,6 +121,23 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 }
 
 int
+labels_get_target (const char *name)
+{
+	label *ptr;
+
+	ptr = _root;
+	
+	while (ptr)
+	{
+		if (!strcmp (ptr->name, name))
+			return ptr->address;
+		ptr = ptr->next;
+	}
+	
+	return -1;
+}
+
+int
 labels_is_charstring (char *str)
 {
 	char *p = str;
@@ -133,4 +151,41 @@ labels_is_charstring (char *str)
 	}
 	
 	return FALSE;
+}
+
+int
+labels_resolve (const char *filename, char *outfile, int base_address)
+{
+	FILE *fin, *ftemp;
+	
+	fin = fopen (filename, "r");
+	
+	if (!fin)
+	{
+		fprintf (stderr, "Can't open source file.\n");
+		return FALSE;
+	}
+	
+	labels_random_name(outfile);
+	ftemp = fopen (outfile, "w");
+	
+	if (!ftemp)
+	{
+		fprintf (stderr, "Can't create temporary file.\n");
+		return FALSE;
+	}
+	
+	labels_phase_one (fin);
+	
+	labels_phase_two (fin, ftemp, base_address);	
+	
+	fclose (fin);
+	fclose (ftemp);
+}
+
+void
+labels_random_name (char *name)
+{
+	srand (time(NULL));
+	sprintf (name, "tempfile.%d.xsm", rand());	
 }

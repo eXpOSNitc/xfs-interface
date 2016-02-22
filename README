@@ -10,6 +10,7 @@ Installation
 Prerequisites :
 -------------
 	• GCC (GNU project C and C++ compiler)
+	• libreadline-dev (readline library for command completion)
 
 Compiling and Running :
 ---------------------
