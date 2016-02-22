@@ -121,8 +121,16 @@ typedef struct{
 
 BLOCK disk[NO_BLOCKS_TO_COPY + EXTRA_BLOCKS];			// disk contains the memory copy of the necessary blocks of the actual disk file.
 
+typedef struct _XOSFILE
+{
+  char *name;
+  int size;
+
+  struct _XOSFILE *next;
+} XOSFILE;
 
 
+XOSFILE* getAllFiles();
 
 /*
   This function lists all the files present on the disk.
