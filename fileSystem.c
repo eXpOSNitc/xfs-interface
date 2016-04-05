@@ -1,4 +1,5 @@
 #include "fileSystem.h"
+#include "memOrg.h"
 #include<stdio.h>
 #include<stdlib.h>
 
@@ -714,7 +715,7 @@ int loadINITCode(char* infile )
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, INIT_BASIC_BLOCK * BLOCK_SIZE);
+	labels_resolve (infile, fileName, MEM_INIT_BASIC_BLOCK * PAGE_SIZE);
 	
 	fp = fopen(fileName, "r");
 	if(fp == NULL)
@@ -755,7 +756,7 @@ int loadOSCode(char* infile){
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, OS_STARTUP_CODE * BLOCK_SIZE);
+	labels_resolve (infile, fileName, MEM_OS_STARTUP_CODE * PAGE_SIZE);
 	
 	FILE* fp = fopen(fileName, "r");
 	
@@ -790,7 +791,7 @@ int loadDiskControllerIntCode(char* infile)
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, DISKCONTROLLER_INT * BLOCK_SIZE);
+	labels_resolve (infile, fileName, MEM_DISKCONTROLLER_INT * PAGE_SIZE);
 	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
@@ -824,7 +825,7 @@ int loadConsoleIntCode(char* infile)
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, CONSOLE_INT * BLOCK_SIZE);
+	labels_resolve (infile, fileName, MEM_CONSOLE_INT * PAGE_SIZE);
 	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
@@ -861,7 +862,7 @@ int loadIntCode(char* infile, int intNo)
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, (((intNo - 1) * INT1_SIZE)  + INT1 )  * BLOCK_SIZE);
+	labels_resolve (infile, fileName, (((intNo - 1) * MEM_INT1_SIZE)  + MEM_INT1 )  * PAGE_SIZE);
 	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
@@ -899,7 +900,7 @@ int loadTimerCode(char* infile)
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, TIMERINT * BLOCK_SIZE);
+	labels_resolve (infile, fileName, MEM_TIMERINT * PAGE_SIZE);
 	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
@@ -936,7 +937,7 @@ int loadExHandlerToDisk(char* infile)
 	char fileName[66];
 	
 	labels_reset ();	
-	labels_resolve (infile, fileName, EX_HANDLER * BLOCK_SIZE);
+	labels_resolve (infile, fileName, MEM_EX_HANDLER * PAGE_SIZE);
 	
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
