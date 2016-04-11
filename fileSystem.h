@@ -8,46 +8,66 @@
 #include <fcntl.h>
 #include "disk.h"
 /*
-Declarations of Disk parameters
+Disk Organization
 */
 
 #define BLOCK_SIZE 512
 #define WORD_SIZE 16
-#define OS_STARTUP_CODE 1
-#define EX_HANDLER 2
-#define TIMERINT 4
-#define DISKCONTROLLER_INT 6
-#define CONSOLE_INT 8
+#define OS_STARTUP_CODE 0
+#define DISK_FREE_LIST 2
+#define INODE 3
+#define ROOT_FILE 5
+#define INIT_BASIC_BLOCK 7
+#define SHELL_BASIC_BLOCK 9
+#define LIBRARY 13
+#define EX_HANDLER 15
+#define TIMERINT 17
+#define DISKCONTROLLER_INT 19
+#define CONSOLE_INT 21
 #define INT0 EX_HANDLER
 #define INT1 TIMERINT
 #define INT2 DISKCONTROLLER_INT
 #define INT3 CONSOLE_INT
-#define INT4 10
-#define INT5 12
-#define INT6 14
-#define INT7 16
-#define INT8 18
-#define INT9 20
-#define INT10 22
-#define INT11 24
-#define INT12 26
-#define INT13 28
-#define INT14 30
-#define INT15 32
-#define INT16 34
-#define INT17 36
-#define INT18 38
+#define INT4 23
+#define INT5 25
+#define INT6 27
+#define INT7 29
+#define INT8 31
+#define INT9 33
+#define INT10 35
+#define INT11 37
+#define INT12 39
+#define INT13 41
+#define INT14 43
+#define INT15 45
+#define INT16 47
+#define INT17 49
+#define INT18 51
+#define MOD0 53
+#define MOD1 55
+#define MOD2 57
+#define MOD3 59
+#define MOD4 61
+#define MOD5 63
+#define MOD6 65
+#define MOD7 67
 
 
-#define OS_STARTUP_CODE_SIZE 1
+#define OS_STARTUP_CODE_SIZE 2
+#define NO_OF_FREE_LIST_BLOCKS 1
+#define INODE_SIZE 2
+#define ROOT_FILE_SIZE 1
+#define NO_OF_INIT_BLOCKS 2
+#define NO_OF_SHELL_BLOCKS 2
+#define NO_OF_LIBRARY_BLOCKS 13
 #define EX_HANDLER_SIZE 2
 #define TIMERINT_SIZE 2
 #define DISKCONTROLLER_INT_SIZE 2
 #define CONSOLE_INT_SIZE 2
-#define INT0_SIZE 2
-#define INT1_SIZE 2
-#define INT2_SIZE 2
-#define INT3_SIZE 2
+#define INT0_SIZE EX_HANDLER_SIZE
+#define INT1_SIZE TIMERINT_SIZE
+#define INT2_SIZE DISKCONTROLLER_INT_SIZE
+#define INT3_SIZE CONSOLE_INT_SIZE
 #define INT4_SIZE 2
 #define INT5_SIZE 2
 #define INT6_SIZE 2
@@ -63,23 +83,28 @@ Declarations of Disk parameters
 #define INT16_SIZE 2
 #define INT17_SIZE 2
 #define INT18_SIZE 2
+#define MOD0_SIZE 2
+#define MOD1_SIZE 2
+#define MOD2_SIZE 2
+#define MOD3_SIZE 2
+#define MOD4_SIZE 2
+#define MOD5_SIZE 2
+#define MOD6_SIZE 2
+#define MOD7_SIZE 2
+
 #define FAT 40
 #define NO_OF_FAT_BLOCKS 1
 
-#define DISK_FREE_LIST 41
-#define NO_OF_FREE_LIST_BLOCKS 1
 
-#define INIT_BASIC_BLOCK 42
 #define INIT_NAME "init.xsm"
-#define NO_OF_INIT_BLOCKS 3
 
 #define NO_OF_INTERRUPTS 18
 
-#define DATA_START_BLOCK 45
-#define NO_OF_DATA_BLOCKS 404
+#define DATA_START_BLOCK 69
+#define NO_OF_DATA_BLOCKS 187
 
-#define SWAP_START_BLOCK 448
-#define NO_OF_SWAP_BLOCKS 64
+#define SWAP_START_BLOCK 126
+#define NO_OF_SWAP_BLOCKS 256
 
 #define NO_OF_DISK_BLOCKS 512
 
@@ -108,9 +133,9 @@ Declarations for files
 Other declarations
 */
 
-#define NO_BLOCKS_TO_COPY 21        //Rest of the blocks have data. Blocks 0-12 need to be copied 
+#define NO_BLOCKS_TO_COPY 69        //Rest of the blocks have data. Blocks 0-12 need to be copied 
 #define EXTRA_BLOCKS	1			// Need a temporary block
-#define TEMP_BLOCK 21				//Temporary block no: starting from 0.
+#define TEMP_BLOCK 69				//Temporary block no: starting from 0.
 
 #define ASSEMBLY_CODE 0
 #define DATA_FILE 1
