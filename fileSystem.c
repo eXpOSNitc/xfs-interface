@@ -489,6 +489,20 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 
 }
 
+int
+fs_load_exec (const char *fname)
+{
+	/* Determine whether we have space in the root file or not. */
+	int n_files = inode_get_count ();
+	char temp_file[66];
+
+	if (n_files >= MAX_NUM_FILES)
+	{
+		fprintf (stderr, "Disk full.\n");
+		return FALSE;
+	}
+}
+
 
 
 

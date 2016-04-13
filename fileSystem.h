@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "disk.h"
+
 /*
 Disk Organization
 */
@@ -110,6 +111,8 @@ Disk Organization
 
 #define DISK_SIZE (NO_OF_DISK_BLOCKS * BLOCK_SIZE)
 
+
+#define MAX_FILE_NUM 60
 
 /*
 Declarations for FAT Entry
