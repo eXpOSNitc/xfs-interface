@@ -425,7 +425,7 @@ void runCommand(char command[])
 			}
 		}
 		else if (strcmp(arg1,"--exhandler")==0) 
-			{
+ 			{
 				loadExHandlerToDisk(fileName);		 //loads exception handler routine to disk.
 			}
 		else
@@ -511,7 +511,7 @@ void runCommand(char command[])
 	else if (strcmp(name,"cat")==0)		//Displays contents of a file
 	{
 		arg1 = strtok(NULL, " ");
-		char *fileName = arg1;;
+		char *fileName = arg1;
 		if(fileName!=NULL)
 		{
 			//fileName[WORD_SIZE+1] = '\n';

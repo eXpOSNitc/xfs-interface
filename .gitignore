@@ -1,5 +1,6 @@
 xfs-interface
 disk.xfs
+*.dat
 *~
 temp
 test

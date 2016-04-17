@@ -21,7 +21,7 @@ void createDisk(int format)
 		fd = open(DISK_NAME, O_CREAT | O_TRUNC | O_SYNC, 0666);
 		clearVirtDisk();
 		close(fd);
-		int i=0,j=0;
+		int i=0,j=0,k;
 		
 		for(j=0; j<(NO_OF_FREE_LIST_BLOCKS*BLOCK_SIZE); j++)
 		{
@@ -35,21 +35,13 @@ void createDisk(int format)
 		for(i=0; i<NO_OF_FREE_LIST_BLOCKS;i++)
 			writeToDisk(DISK_FREE_LIST+i, DISK_FREE_LIST+i);
 			
-		for(j=0; j<NO_OF_FAT_BLOCKS; j++)
+		for(j=0; j<NO_OF_INODE_BLOCKS; j++)
 		{
-			for(i=FATENTRY_BASICBLOCK; i<BLOCK_SIZE; i=i+FATENTRY_SIZE)
+			for(i=0; i<BLOCK_SIZE; i++)
 			{
-				storeValue(disk[FAT + j].word[i], -1);
+				storeValue(disk[INODE + j].word[i], -1);
 			}
-			for(i=FATENTRY_FILENAME; i<BLOCK_SIZE; i=i+FATENTRY_SIZE)
-			{
-				storeValue(disk[FAT + j].word[i], -1);
-			}
-			for(i=FATENTRY_FILESIZE; i<BLOCK_SIZE; i=i+FATENTRY_SIZE)
-			{
-				storeValue(disk[FAT + j].word[i], 0);
-			}
-			writeToDisk(FAT+j, FAT+j);
+			writeToDisk(INODE+j, INODE+j);
 		}
 	}
 	else

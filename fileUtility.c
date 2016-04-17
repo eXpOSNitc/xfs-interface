@@ -76,7 +76,7 @@ int loadFileToVirtualDisk()
 	int i;
 	for(i=DISK_FREE_LIST; i<DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)
 		readFromDisk(i,i);
-	for(i=FAT; i<FAT + NO_OF_FAT_BLOCKS; i++)
+	for(i=INODE; i<INODE + NO_OF_INODE_BLOCKS; i++)
 		readFromDisk(i,i);
 }
 
