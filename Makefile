@@ -1,9 +1,33 @@
-DISK = disk
+#Our compiler.
+CC = gcc
+CFLAGS = -g 
+LDFLAGS = -lreadline
+#Default rule.
 
-all: xfs-interface
+default: xfs-interface
 
-xfs-interface: fileSystem.h fileSystem.c diskUtility.h diskUtility.h interface.h interface.c inode.h inode.c labels.c labels.h exception.h exception.c
-	gcc -g fileSystem.c diskUtility.c labels.c interface.c inode.c exception.c -o xfs-interface -lreadline
+xfs-interface: *.c *.h
+	$(CC) $(CFLAGS) *.c -o xfs-interface $(LDFLAGS)
+#xfs-interface: labels.o diskUtility.o inode.o interface.o fileSystem.o exception.o
+#	$(CC) $(CFLAGS) -o xfs-interface  labels.o diskUtility.o inode.o interface.o fileSystem.o exception.o $(LDFLAGS)
+
+#diskUtility.o: diskUtility.c diskUtility.h exception.h
+#	$(CC) $(CFLAGS) -c diskUtility.c
+
+#exception.o: exception.c exception.h
+#	$(CC) $(CFLAGS) -c exception.c
+
+#fileSystem.o: fileSystem.c fileSystem.h memOrg.h inode.h diskUtility.h constants.h
+#	$(CC) $(CFLAGS) -c fileSystem.c
+
+#inode.o: inode.c inode.h
+#	$(CC) $(CFLAGS) -c inode.c
+
+#interface.o: interface.c interface.h inode.h diskUtility.h fileSystem.h 
+#	$(CC) $(CFLAGS) -c interface.c
+
+#labels.o: labels.c labels.h
+#	$(CC) $(CFLAGS) -c labels.c
 
 clean:
-	rm -rf $(DISK) *.o xfs-interface 2> /dev/null
+	$(RM) xfs-interface *.o 

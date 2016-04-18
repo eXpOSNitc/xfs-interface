@@ -1,143 +1,728 @@
+#include "fileSystem.h"
+#include "memOrg.h"
+#include "inode.h"
 #include "diskUtility.h"
-#include "exception.h"
+#include "virtualDisk.h"
+#include "constants.h"
+#include <stdio.h>
+#include <stdlib.h>
+extern BLOCK* disk;
+
+void disk_init()
+{
+	_disk_init();
+}
+
+void
+listAllFiles ()
+{
+	XOSFILE *list, *next;
+
+	list = getAllFiles();
+
+	if (!list)
+	{
+		printf("The disk contains no files.\n");
+		return;
+	}
+
+	while (list)
+	{
+		printf ("Filename: %s Filesize %d\n", list->name, list->size);
+		next = list->next;
+
+		free (list->name);
+		free(list);
+		list = next;
+	}
+}
+
+XOSFILE* getAllFiles()
+{
+	return _getAllFiles();
+}
 
 /*
- This function empties a block as specified by the first arguement in the memory copy of the disk file.
+	This function deletes an executable/data file from the disk.
+	NOTE: 1. Memory copy is committed to disk.
+	2. Due to a technical glitch any string which is already stored on the disk will have to be searched in the
+		memory copy after appending a newline.
 */
-void emptyBlock(int blockNo) 
+int deleteFileFromDisk(char *name,int max_num_blocks)
+{
+	int locationOfInode,i,blockAddresses[max_num_blocks];	//0-basic block , 1,2,3-code+data blocks
+	for(i = 0; i < max_num_blocks; i++)
+		blockAddresses[i]=0;
+	locationOfInode = checkRepeatedName(name);
+	if(locationOfInode >= INODE_SIZE){
+		printf("File \'%s\' not found!\n",name);
+		return -1;
+	}
+	getDataBlocks(blockAddresses,locationOfInode);		
+	freeUnusedBlock(blockAddresses, max_num_blocks);
+	removeInodeEntry(locationOfInode);
+	commitMemCopyToDisk(INODE);
+	commitMemCopyToDisk(DISK_FREE_LIST);
+	return 0;	
+}
+
+/*
+	This function deletes a data file from the disk.
+*/
+int deleteExecutableFromDisk(char *name)
+{
+	
+	if(strstr(name,".xsm") == NULL)
+	{
+		printf("\'%s\' is not a valid executable file!\n",name);
+		return -1;
+	}
+	return deleteFileFromDisk(name,INODE_MAX_BLOCK_NUM);
+}
+
+/*
+ 	This function deletes a data file from the disk.
+*/
+int deleteDataFromDisk(char *name)
+{
+	return deleteFileFromDisk(name,INODE_MAX_BLOCK_NUM);
+}
+
+/*
+	This function deletes the SPL code at the specified loacation from the disk.
+*/
+int deleteSPLFromDisk(int disk_block, int no_of_disk_blocks)
 {
 	int i;
-	for(i = 0 ; i < BLOCK_SIZE ; i++)
-	{
-		strcpy(disk[blockNo].word[i],"") ;
-	}
+	emptyBlock(TEMP_BLOCK);
+	for (i=0; i<no_of_disk_blocks; i++)
+		writeToDisk(TEMP_BLOCK, disk_block + i);	
+	return 0;
+}
+
+/*
+	This function deletes the INIT code from the disk.
+*/
+int deleteINITFromDisk()
+{
+	return deleteSPLFromDisk(INIT_BASIC_BLOCK, NO_OF_INIT_BLOCKS);
+}
+
+/*
+	This function deletes the OS code from the disk.
+*/
+int deleteOSCodeFromDisk()
+{
+	return deleteSPLFromDisk(OS_STARTUP_CODE, OS_STARTUP_CODE_SIZE);
+}
+
+/*
+	This function deletes the Timer Interrupt from the disk.
+*/
+int deleteTimerFromDisk()
+{
+	return deleteSPLFromDisk(TIMERINT, TIMERINT_SIZE);
+}
+
+int deleteDiskControllerINTFromDisk()
+{
+	return deleteSPLFromDisk(DISKCONTROLLER_INT, DISKCONTROLLER_INT_SIZE);
+}
+
+int deleteConsoleINTFromDisk()
+{
+	return deleteSPLFromDisk(CONSOLE_INT, CONSOLE_INT_SIZE);
+}
+/*
+	This function deletes the Interrupt <intNo> from the disk.
+*/
+int deleteIntCode(int intNo)
+{
+	return deleteSPLFromDisk(((intNo - 1) * INT1_SIZE) + INT1, INT1_SIZE);
+}
+
+/*
+	This function deletes the Exception Handler from the disk.
+*/
+int deleteExHandlerFromDisk()
+{
+	return deleteSPLFromDisk(EX_HANDLER, EX_HANDLER_SIZE);
 }
 
 
 /*
-  This function frees the blocks specified by the block number present in the first arguement. The second arguement is the size
-  of the first argument.
-  The memory copy is not committed.
+	This file copies the necessary contents of a file to the corresponding location specified by the second arguemnt on the disk.
+	The file is first copied to the memory copy of the disk. This is then committed to the actual disk file.
+	NOTE: 1. EOF is set only after reading beyond the end of the file. This is the reason why the if condition is needed is needed.
+	2. Also the function must read till EOF or BLOCK_SIZE line so that successive read proceeds accordingly
 */
-void freeUnusedBlock(int *freeBlock, int size){
-	int i=0;
-	for( i = 0 ; i < size && freeBlock[i] != -1 && freeBlock[i] != 0; i++){
-		//printf("Block Num = %d\nLocation = %d", freeBlock[i],freeBlock[i] % BLOCK_SIZE );
-		storeValueAt(DISK_FREE_LIST * BLOCK_SIZE + freeBlock[i] , 0 );
+int writeFileToDisk(FILE *f, int blockNum, int type)
+{
+	int i, line=0,j;
+	char buffer[32],s[16],temp[100],c;
+	emptyBlock(TEMP_BLOCK);
+	if(type==ASSEMBLY_CODE)			//writing files with assembly code
+	{
+		char *instr, *arg1, *arg2, *string_start;
+		int line_count=0,flag=0,k=0;
+		for(i = 0; i < (BLOCK_SIZE/2); i++)
+		{
+			fgets(temp,100,f);
+			
+			string_start=strchr(temp,'"');
+			if(string_start==NULL)
+			{
+				for(k=0;k<31;k++)
+					buffer[k]=temp[k];
+				buffer[k]='\0';
+			}
+			else
+			{
+				if(strlen(string_start)<=16)
+				{
+					for(k=0;k<31;k++)
+						buffer[k]=temp[k];
+					buffer[k]='\0';
+				}
+				else
+				{
+					for(k=0;k<(strlen(temp)-strlen(string_start)+15);k++)
+					{
+						buffer[k]=temp[k];
+					}
+					buffer[k-1]='"';
+					buffer[k]='\0';
+				}
+			}
+		
+			
+			if(strlen(buffer)>3)
+			{
+				if(buffer[strlen(buffer)-1]=='\n')
+					buffer[strlen(buffer)-1]='\0';
+				instr=strtok(buffer," ");
+				arg1=strtok(NULL," ");
+				arg2=strtok(NULL,",");
+			
+				bzero(s,16);
+				if(arg1!=NULL)
+				{
+					sprintf(s,"%s %s",instr,arg1);
+					for(j=strlen(s);j<16;j++)
+						s[j]='\0';
+					strcpy(disk[TEMP_BLOCK].word[line_count],s);
+					if(arg2!=NULL)
+					{
+						strcpy(s,arg2);
+						for(j=strlen(s);j<16;j++)
+							s[j]='\0';
+						strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
+				
+					}
+					else
+					{
+						for(j=0;j<16;j++)
+							s[j]='\0';
+						strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
+					}
+					line_count=line_count+2;
+				}
+				else
+				{
+					sprintf(s,"%s",instr);
+					for(j=strlen(s);j<=16;j++)
+						strcat(s,"\0");
+					strcpy(disk[TEMP_BLOCK].word[line_count],s);
+					bzero(s,16);
+					for(j=0;j<16;j++)
+						s[j]='\0';
+					strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
+					line_count=line_count+2;
+			
+				}
+			
+			}
+			
+			 if(feof(f)){
+				strcpy(disk[TEMP_BLOCK].word[line_count], "");
+				writeToDisk(TEMP_BLOCK,blockNum);
+				return -1;
+			 }
+			
+		}
+		writeToDisk(TEMP_BLOCK,blockNum);
+		return 1;
+	}	
+	else if(type==DATA_FILE)			//writing data files
+	{
+		char buffer1[16],c;
+		for(i = 0; i < BLOCK_SIZE; i++)
+		{
+			fgets(buffer1,16,f);
+			strcpy(disk[TEMP_BLOCK].word[i],buffer1);
+			if(feof(f))
+			{
+				strcpy(disk[TEMP_BLOCK].word[i], "");
+				writeToDisk(TEMP_BLOCK,blockNum);
+				return -1;
+			}	
+		}
+		writeToDisk(TEMP_BLOCK,blockNum);
+		return 1;
+	}
+
+}
+
+
+/*
+	This function loads the executable file corresponding to the first arguement to an appropriate location on the disk.
+	This function systematically uses the above functions to do this action.
+*/
+int loadExecutableToDisk(char *name)
+{
+	FILE *fileToBeLoaded;
+	int freeBlock[INODE_MAX_BLOCK_NUM];
+	int i,j,k,l,file_size=0,num_of_lines=0,num_of_blocks_reqd=0;
+	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
+		freeBlock[i]=-1;
+	char c='\0',*s;
+	char filename[50];
+	s = strrchr(name,'/');
+	if(s!=NULL)
+		strcpy(filename,s+1);
+	else
+		strcpy(filename,name);	
+	
+	filename[15]='\0';
+		
+	addext(filename,".xsm");
+
+	expandpath(name);
+	fileToBeLoaded = fopen(name, "r");
+	if(fileToBeLoaded == NULL){
+		printf("File %s not found.\n", name);
+		return -1;
+	}
+	if(fileToBeLoaded == NULL){
+		printf("The file could not be opened");
+		return -1;
+	}
+	
+	while(c!=EOF)
+	{
+		c=fgetc(fileToBeLoaded);
+		if(c=='\n')
+			num_of_lines++;
+	}
+	
+	num_of_blocks_reqd = (num_of_lines / (BLOCK_SIZE/2)) + 1;
+	
+	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
+	{
+		printf("The size of file exceeds %d blocks",INODE_MAX_BLOCK_NUM);
+		return -1;
+	}
+	
+	fseek(fileToBeLoaded,0,SEEK_SET);
+	
+	for(i = 0; i < num_of_blocks_reqd + 1; i++)
+	{
+		if((freeBlock[i] = FindFreeBlock()) == -1){
+				printf("Insufficient disk space!\n");
+				freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+				return -1;
+			}
+	}
+	i = checkRepeatedName(filename);
+	if( i < INODE_SIZE ){
+		printf("Disk already contains the file with this name. Try again with a different name.\n");
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		return -1;
+	}
+	
+	k = FindEmptyInodeEntry();		
+	if( k == -1 ){
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		printf("No free INODE entry found.\n");
+		return -1;			
+	}
+	
+	
+	for(i = DISK_FREE_LIST ;i < DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)		//updating disk free list in disk
+		writeToDisk(i, i);
+	emptyBlock(TEMP_BLOCK);				//note:need to modify this
+	
+	for(i=0;i<num_of_blocks_reqd;i++)
+	{
+		j = writeFileToDisk(fileToBeLoaded, freeBlock[i], ASSEMBLY_CODE);
+		file_size++;
+	}
+	
+
+
+	AddEntryToMemInode(k, FILETYPE_EXEC,filename, file_size * BLOCK_SIZE, freeBlock);	
+	for(i = INODE; i < INODE + NO_OF_INODE_BLOCKS ; i++){
+		writeToDisk(i,i);				
+	}
+	
+	close(fileToBeLoaded);
+	return 0;
+}
+
+
+
+/*
+	This function loads a data file to the disk.
+*/
+int loadDataToDisk(char *name)
+{
+	FILE *fileToBeLoaded;
+	int freeBlock[INODE_MAX_BLOCK_NUM];
+	int i,j,k,num_of_chars=0,num_of_blocks_reqd=0,file_size=0;
+	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
+		freeBlock[i]=-1;
+	char c='\0',*s;
+	char filename[50];
+	s = strrchr(name,'/');
+	if(s!=NULL)
+		strcpy(filename,s+1);
+	else
+		strcpy(filename,name);	
+	
+	filename[15]='\0';
+	addext(filename,".dat");
+
+	expandpath(name);
+	fileToBeLoaded = fopen(name, "r");
+	if(fileToBeLoaded == NULL)
+	{
+		printf("File \'%s\' not found.!\n", name);
+		return -1;
+	}
+	if(fileToBeLoaded == NULL)
+	{
+		printf("The file could not be opened!");
+		return -1;
+	}
+	
+	fseek(fileToBeLoaded, 0L, SEEK_END);
+	
+	num_of_chars = ftell(fileToBeLoaded);
+	
+	num_of_blocks_reqd = (getDataFileSize(fileToBeLoaded)/512+1) ;
+	//printf("\n Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
+	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
+	{
+		printf("The size of file exceeds %d blocks",INODE_MAX_BLOCK_NUM);
+		return -1;
+	}
+	
+	fseek(fileToBeLoaded,0,SEEK_SET);
+	
+	for(i = 0; i < num_of_blocks_reqd; i++)
+	{
+		if((freeBlock[i] = FindFreeBlock()) == -1){
+				printf("not sufficient space in disk to hold a new file.\n");
+				freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+				return -1;
+			}
+	}
+	i = checkRepeatedName(filename);
+	if( i < INODE_SIZE )
+	{
+		printf("Disk already contains the file with this name. Try again with a different name.\n");
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		return -1;
+	}
+	
+	k = FindEmptyInodeEntry();		
+	if( k == -1 )
+	{
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		printf("No free INODE entry found.\n");
+		return -1;			
+	}
+	
+	commitMemCopyToDisk(DISK_FREE_LIST);
+
+	emptyBlock(TEMP_BLOCK);				//note:need to modify this
+	
+	
+	for(i=0;i<num_of_blocks_reqd;i++)//load the file
+	{
+		j = writeFileToDisk(fileToBeLoaded, freeBlock[i], DATA_FILE);
+		file_size++;
+	}
+	
+	
+	AddEntryToMemInode(k, FILETYPE_DATA, filename, file_size * BLOCK_SIZE, freeBlock);		
+	commitMemCopyToDisk(INODE);
+	
+	close(fileToBeLoaded);
+	return 0;
+}
+
+/*
+	Returns the size of a unix data file in words
+*/
+int getDataFileSize(FILE *fp)
+{
+	int num_of_words=0;
+	char buf[16];
+	fseek(fp,0,SEEK_SET);
+	while(1)
+	{
+		fgets(buf,XSM_WORD_SIZE,fp);
+		num_of_words++;
+		if(feof(fp))
+			break;
+	}
+	return num_of_words;
+}
+
+/*
+	This function loads the SPL code specified by the first argument to the specified location on disk.
+	labels in code are replaced by mem addresses, taking the given MEM_PAGE as memory base address
+	The code is first copied to memory copy. If this copying proceeds properly then the memory copy is committed to the disk.
+*/
+int loadSPLCode(char* infile, int disk_block, int no_of_disk_blocks, int mem_page)
+{
+	expandpath(infile);
+	
+	char fileName[66];
+	
+	labels_reset ();	
+	labels_resolve (infile, fileName, mem_page * PAGE_SIZE);
+	
+	FILE* fp = fopen(fileName, "r");
+	int i,j;
+	if(fp == NULL)
+	{
+		printf("File %s not found.\n", fileName);
+		return -1;
+	}
+	
+	for(i=0;i<no_of_disk_blocks;i++)
+	{
+		j = writeFileToDisk(fp, disk_block + i, ASSEMBLY_CODE);
+		if (j != 1)
+			break;
+	}
+	if(j==1)
+	{
+		printf("Code exceeds %d block\n",DISKCONTROLLER_INT_SIZE);
+		deleteSPLFromDisk(disk_block,no_of_disk_blocks);
+		//emptyBlock(TEMP_BLOCK);
+		//writeToDisk(TEMP_BLOCK,TIMERINT);
+	}
+	close(fp);
+	return 0;
+}
+
+/*
+	This function copies the init program to its proper location on the disk.
+*/
+int loadINITCode(char* infile )
+{
+	return loadSPLCode(infile, INIT_BASIC_BLOCK, NO_OF_INIT_BLOCKS, MEM_INIT_BASIC_BLOCK);
+}
+
+/*
+	This function loads the OS startup code specified by the first argument to its appropriate location on disk.
+	The code is first copied to memory copy. If this copying proceeds properly then the memory copy is committed to the disk.
+*/
+int loadOSCode(char* infile)
+{
+	return loadSPLCode(infile, OS_STARTUP_CODE, OS_STARTUP_CODE_SIZE, MEM_OS_STARTUP_CODE);
+}
+
+int loadDiskControllerIntCode(char* infile)
+{
+	return loadSPLCode(infile, DISKCONTROLLER_INT, DISKCONTROLLER_INT_SIZE, MEM_DISKCONTROLLER_INT);
+}
+
+int loadConsoleIntCode(char* infile)
+{
+	return loadSPLCode(infile, CONSOLE_INT, CONSOLE_INT_SIZE, MEM_CONSOLE_INT);
+}
+
+/*
+	This function copies the interrupts to the proper location on the disk.
+*/
+int loadIntCode(char* infile, int intNo)
+{
+	return loadSPLCode(infile,((intNo - 1) * INT1_SIZE) + INT1, INT1_SIZE, ((intNo - 1) * MEM_INT1_SIZE) + MEM_INT1 );
+}
+
+/*
+	This function copies the timer interrupt to the proper location on the disk.
+*/
+int loadTimerCode(char* infile)
+{
+	return loadSPLCode(infile, TIMERINT, TIMERINT_SIZE, MEM_TIMERINT);
+}
+
+/*
+	This function copies the exception handler to the proper location on the disk.
+*/
+int loadExHandlerToDisk(char* infile)
+{
+	return loadSPLCode(infile, EX_HANDLER, EX_HANDLER_SIZE, MEM_EX_HANDLER);
+}
+
+
+
+/*
+	This function displays the content of the files stored in the disk.
+*/
+void displayFileContents(char *name)
+{
+	diskCheckFileExists();
+	int i,j,k,l,flag=0,locationOfInode;
+	int blk[512];
+	
+	for(i=0;i<511;i++)
+		blk[i] = 0;
+	
+	locationOfInode = checkRepeatedName(name);
+	if(locationOfInode >= INODE_SIZE){
+		printf("File \'%s\' not found!\n",name);
+		return;
+	}
+	
+	
+	getDataBlocks(blk,locationOfInode);
+
+	k = 1;
+	while (blk[k] > 0)
+	{
 		emptyBlock(TEMP_BLOCK);
-		writeToDisk(TEMP_BLOCK,freeBlock[i]);
+		readFromDisk(TEMP_BLOCK,blk[k]);
+		for(l=0;l<BLOCK_SIZE;l++)
+		{
+			if(strcmp(disk[TEMP_BLOCK].word[l],"\0")!=0)
+				printf("%s	\n",disk[TEMP_BLOCK].word[l]);
+		}
+		//printf("next block\n");
+		emptyBlock(TEMP_BLOCK);
+		k++;
 	}
 }
 
 /*
- This function reads an entire BLOCK from the address specified from fileBlockNumber on the disk file to virtBlockNumber on the memory copy of the disk.
+	This function copies the contents of the disk starting from <startBlock> to <endBlock> to a unix file.
 */
-int readFromDisk(int virtBlockNumber, int fileBlockNumber) {
-	int fd;
-	fd = open(DISK_NAME, O_RDONLY, 0666);
-	if(fd < 0)
+void copyBlocksToFile (int startblock,int endblock,char *filename)
+{
+	diskCheckFileExists();
+
+	int i,j;
+	FILE *fp;
+	expandpath(filename);
+	fp = fopen(filename,"w");
+	if(fp == NULL)
 	{
-		printf("Unable to Open Disk File\n");
-		return -1;
+		printf("File \'%s\' not found!\n", filename);
 	}
-	lseek(fd,sizeof (BLOCK)*fileBlockNumber,SEEK_SET);
-	read(fd,&disk[virtBlockNumber],sizeof (BLOCK));
-	close(fd);
-	return 0;
-}
-
-
-/*
-  This function writes an entire block to fileBlocknumber on the disk file from virtBlockNumber on the memory copy of the disk.
-*/
-int writeToDisk(int virtBlockNumber, int fileBlockNumber) {
-	int fd;
-	fd = open(DISK_NAME, O_WRONLY, 0666);
-	if(fd < 0)
+	else
 	{
-		printf("Unable to Open Disk File\n");
-		return -1;
+		for(i = startblock; i <= endblock; i++)
+		{
+			emptyBlock(TEMP_BLOCK);
+			readFromDisk(TEMP_BLOCK,i);
+			for(j=0;j<BLOCK_SIZE;j++)
+			{
+				fprintf(fp,"%s\n",disk[TEMP_BLOCK].word[j]);
+			}
+		}
+		fclose(fp);
 	}
-	lseek(fd,0,SEEK_SET);
-	lseek(fd,sizeof (BLOCK)*fileBlockNumber,SEEK_CUR);
-	write(fd,&disk[virtBlockNumber],sizeof (BLOCK));
-	close(fd);	
-	return 0;
-}
-
-
-/*
-  This function initialises the memory copy of the disk with the contents from the actual disk file.
-*/
-int loadFileToVirtualDisk()
-{
-	int i;
-	for(i=DISK_FREE_LIST; i<DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)
-		readFromDisk(i,i);
-	for(i=INODE; i<INODE + NO_OF_INODE_BLOCKS; i++)
-		readFromDisk(i,i);
 }
 
 /*
-  This function wipes out the entire contents of the memory copy of the disk.
+	This function displays disk free list and the amount of free space in the disk.
 */
-void clearVirtDisk()
+void displayDiskFreeList()
 {
-	bzero(disk, sizeof(disk));
+	diskCheckFileExists();
+	
+	int i,j,no_of_free_blocks=0;
+	for(j = 0; j < NO_OF_FREE_LIST_BLOCKS; j++)
+	{
+		for(i = 0; i < BLOCK_SIZE; i++)
+		{
+			printf("%d \t - \t %s  \n",i,disk[DISK_FREE_LIST+j].word[i]);
+			if(getValue(disk[DISK_FREE_LIST+j].word[i])==0)
+				no_of_free_blocks++;
+		}
+	}
+	printf("\nNo of Free Blocks = %d",no_of_free_blocks);
+	printf("\nTotal no of Blocks = %d",NO_OF_DISK_BLOCKS);
 }
 
-int openDiskFile()
+/*
+	formatDisk creates	the disk file if not present.
+	if format is equal to zero then the function creates the disk but does not format it.
+	if format is not equal to zero then the function will create and format the disk.
+	Formatting is done as follows:
+	1. A memory copy of the disk is maintained. This copy contains NO_BLOCKS_TO_COPY + EXTRA_BLOCKS (in this case 13 + 1) blocks.
+	The extra block is a temporary block. This memory copy is called the virtual disk. This is first cleared.
+	2. Then the memory freelist is initialised.
+	3. The fat blocks are also initialised. The basic block entries are all set to -1. The memory copy is then committed to the 
+	disk file.
+	4. Finally the entry for init process is made.
+*/
+void formatDisk(int format)
 {
 	int fd;
-	fd = open(DISK_NAME, O_RDONLY, 0666);
-	if(fd < 0){
-	  exception_throwException(EXCEPTION_CANT_OPEN_DISK);
+	if(format)
+	{
+		createDiskFile(DISK_NO_FORMAT);
+		clearVirtDisk();
+		int i=0,j=0,k;
+		
+		setDefaultValues(DISK_FREE_LIST);
+		commitMemCopyToDisk(DISK_FREE_LIST);
+		
+		setDefaultValues(INODE);
+		commitMemCopyToDisk(INODE);
 	}
-	return fd;
-}
-
-/*
-	Tries to open the disk file, throws an exception if it fails.
-	An exception returns the control to the jmppoint set in interface.c
-*/
-void diskFileExists()
-{
-	close(openDiskFile());
+	else
+	{
+		createDiskFile(DISK_NO_FORMAT);
+	}
+	
 }
 
 
-/*
-  char* to int conversion
-  get integer value at address
-*/
-int getValueAt(int address)
+// To expand environment variables in path
+void expandpath(char *path) 		
 {
-	getValue( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)]);
+	char *rem_path = strdup(path);
+	char *token = strsep(&rem_path, "/");
+	if(rem_path!=NULL)
+		sprintf(path,"%s/%s",getenv(++token)!=NULL?getenv(token):token-1,rem_path);
+	else
+		sprintf(path,"%s",getenv(++token)!=NULL?getenv(token):token-1);
 }
 
-/*
-  char* to int conversion
- */
-
-int getValue(char* str ) 
+void addext(char *filename, char *ext)
 {
-	return atoi(str);
-}
+	int l = strlen(filename);
+	if(l>=16)
+	{
+		strcpy(filename+11,ext);
+		return;
+	}
+	if(strcmp(filename+l-4,ext)!=0)
+	{
+		strcat(filename,ext);
+		l = strlen(filename);
 
-/*
-  int to char* conversion
-*/
-void storeValueAt(int address, int num) 
-{
-	storeValue( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)] , num );
-}
-
-void storeValue(char *str, int num) 
-{
-	sprintf(str,"%d",num);
-}
-
-void storeStringValueAt(int address, char *value) 
-{
-	strcpy( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)] , value );
+		if(l>=16)
+		{
+			strcpy(filename+11,ext);
+			return;
+		}
+	}
 }

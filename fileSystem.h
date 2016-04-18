@@ -1,19 +1,9 @@
 #ifndef FILESYS_H
 #define FILESYS_H
 
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include "disk.h"
-
-/*
-Disk Organization
-*/
-
 #define BLOCK_SIZE 512
 #define WORD_SIZE 16
+
 #define OS_STARTUP_CODE 0
 #define DISK_FREE_LIST 2
 #define INODE 3
@@ -128,173 +118,24 @@ Declarations for INODE Entry
 #define INODE_ENTRY_SIZE 16
 #define INODE_SIZE (NO_OF_INODE_BLOCKS * BLOCK_SIZE)
 
+#define FILETYPE_ROOT 1
+#define FILETYPE_DATA 2
+#define FILETYPE_EXEC 3
 
 /*
 Other declarations
 */
 
-#define NO_BLOCKS_TO_COPY 69        //Rest of the blocks have data. 
+#define NO_BLOCKS_TO_COPY 69		//Rest of the blocks have data. 
 #define EXTRA_BLOCKS	1			// Need a temporary block
 #define TEMP_BLOCK 69				//Temporary block no: starting from 0.
 
-#define ASSEMBLY_CODE 0
-#define DATA_FILE 1
-
-#define FILETYPE_ROOT 1
-#define FILETYPE_DATA 2
-#define FILETYPE_EXEC 3
-
-#define XFS_ERROR -1
-
-typedef struct{
-	char word[BLOCK_SIZE][WORD_SIZE];
-}BLOCK;
-
-BLOCK disk[NO_BLOCKS_TO_COPY + EXTRA_BLOCKS];			// disk contains the memory copy of the necessary blocks of the actual disk file.
-
 typedef struct _XOSFILE
 {
-  char *name;
-  int size;
+	char *name;
+	int size;
 
-  struct _XOSFILE *next;
+	struct _XOSFILE *next;
 } XOSFILE;
 
-
-XOSFILE* getAllFiles();
-
-/*
-  This function lists all the files present on the disk.
-*/
-void listAllFiles();
-
-/*
-  This function deletes an executable file from the disk.
-*/
-int deleteExecutableFromDisk(char *name);
-
-/*
-  This function loads the executable file corresponding to the first arguement to an appropriate location on the disk.
-*/
-int loadExecutableToDisk(char *name);
-
-/*
-  This function checks if a file having name as the first arguement is present on  the disk file.
-*/
-int CheckRepeatedName(char *name);
-
-/*
-  This function returns the address of a free block on the disk.
-*/
-int FindFreeBlock();
-
-/*
-  This function copies the necessary contents of a file to the corresponding location specified by the second arguemnt on the disk. The type specifies the type of file 
-  to be copied.
-*/
-int writeFileToDisk(FILE *f, int blockNum, int type);
-
-/*
-  This function loads the OS startup code specified by the first arguement to its appropriate location on disk.
-*/
-int loadOSCode(char* name);
-
-/*
-  Returns the size of a unix data file in words
-*/
-int getDataFileSize(FILE *fp);
-
-/*
-  This function copies the interrupts to the proper location on the disk.
-*/
-int loadIntCode(char* name, int intNo);
-
-/*
-  This function copies the timer interrupt to the proper location on the disk.
-*/
-int loadTimerCode(char* name);
-
-int loadDiskControllerIntCode(char* name);
-
-int loadConsoleIntCode(char* name);
-
-/*
-  This function copies the exception handler to the proper location on the disk.
-*/
-int loadExHandlerToDisk(char* name);
-
-/*
-  This function copies the init program to its proper location on the disk.
-*/
-int loadINITCode(char* name);
-
-/*
-  This function displays the content of the files stored in the disk.
-*/
-void displayFileContents(char *name);
-
-/*
-  This function copies the contents of the disk starting from <startBlock> to <endBlock> to a unix file.
-*/
-void copyBlocksToFile (int startBlock,int endBlock,char *name);
-
-/*
-  This function deletes the INIT code from the disk.
-*/
-int deleteINITFromDisk();
-
-/*
-  This function deletes the OS code from the disk.
-*/
-int deleteOSCodeFromDisk();
-
-/*
-  This function deletes the Timer Interrupt from the disk.
-*/
-int deleteTimerFromDisk();
-
-int deleteDiskControllerINTFromDisk();
-
-int deleteConsoleINTFromDisk();
-
-
-/*
-  This function deletes the Interrupt <intNo> from the disk.
-*/
-int deleteIntCode(int intNo);	
-
-/*
-  This function deletes the Exception Handler from the disk.
-*/
-int deleteExHandlerFromDisk();
-
-/*
-  This function displays disk free list and the amount of free space in the disk.
-*/
-void displayDiskFreeList();
-
-/*
-  This function loads a data file to the disk.
-*/
-int loadDataToDisk(char *name);
-
-/*
-  This function deletes a data file from the disk.
-*/
-int deleteDataFromDisk(char *name);
-
-/*
-  This function creates the disk file if not present. It also has an option for formatting or not.
-*/
-void formatDisk(int format);
-
-/*
-  This function expands environment variables in path
-*/
-void expandpath(char *path);
-
-/*
-  This function adds extensions (.dat or .xsm) for files loaded into xfs
-*/
-void addext(char *filename, char *ext);
 #endif

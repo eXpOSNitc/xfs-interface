@@ -1,12 +1,14 @@
 #include <string.h>
 #include <libgen.h>
-
+#include <stdlib.h>
+#include <fcntl.h>
 /* For command completion. */
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "interface.h"
 #include "fileSystem.h"
 #include "exception.h"
+#include "diskUtility.h"
 
 jmp_buf exp_point;//for exception handling
 
@@ -50,14 +52,8 @@ void
 cli_run_with_completion ()
 {
 	char *line_read = NULL, *command;
-	int exp_occured;
-	exp_occured = setjmp(exp_point);
-	if(exp_occured)
-		exception_printErrorMessage(exp_occured);
 	while (1)
 	{
-		
-
 		/* Return the memory to the pool if needed. */
 		if (line_read)
 		{
@@ -275,7 +271,7 @@ void cli(int argc, char **argv)
 	}
 	else
 	{
-		printf("Unix-XFS Interace Version 1.0. \nType \"help\" for  getting a list of commands.\n");
+		printf("Unix-XFS Interace Version 2.0. \nType \"help\" for getting a list of commands.\n");
 		cli_init_completion();
 		cli_run_with_completion();
 	}
@@ -289,19 +285,26 @@ void runCommand(char command[])
 	char *name = strtok(command, " ");
 	char *arg1, *arg2, *arg3;
 	
+	char * line = NULL;
+	int exp_occured;
+	exp_occured = setjmp(exp_point);
+	if(exp_occured){
+		exception_printErrorMessage(exp_occured);	
+		return;
+	}
 	
 	if(strcmp(name,"help")==0)		//"help" to display all commands
 	{
 		printf(" fdisk \n\t Format the disk with XFS filesystem\n");
-		printf(" load --exec  <pathname>  \n\t Loads an executable file to XFS disk \n");
-		printf(" load --init  <pathname> \n\t Loads INIT code to XFS disk \n");
+		printf(" load --exec <pathname> \n\t Loads an executable file to XFS disk \n");
+		printf(" load --init <pathname> \n\t Loads INIT code to XFS disk \n");
 		printf(" load --data <pathname> \n\t Loads a data file to XFS disk \n");
-		printf(" load --os  <pathname> \n\t Loads OS startup code to XFS disk \n");
+		printf(" load --os <pathname> \n\t Loads OS startup code to XFS disk \n");
 		printf(" load --int=timer <pathname>\n\t Loads Timer Interrupt routine to XFS disk \n");
 		printf(" load --int=diskcontroller <pathname>\n\t Loads Disk Controller Interrupt routine to XFS disk \n");
 		printf(" load --int=console <pathname>\n\t Loads Console Interrupt routine to XFS disk \n");
 		printf(" load --int=[4-18] <pathname>\n\t Loads the specified Interrupt routine to XFS disk \n");
-		printf(" load --exhandler <pathname>  \n\t Loads exception handler routine to XFS disk \n");
+		printf(" load --exhandler <pathname> \n\t Loads exception handler routine to XFS disk \n");
 		printf(" rm --exec <xfs_filename>\n\t Removes an executable file from XFS disk \n");
 		printf(" rm --init <xfs_filename> \n\t Removes INIT code from XFS disk \n");
 		printf(" rm --data <xfs_filename>\n\t Removes a data file from XFS disk \n");
@@ -329,35 +332,28 @@ void runCommand(char command[])
 	{
 		arg1 = strtok(NULL, " ");
 		FILE * fp = fopen(arg1, "r");
-		char * line = NULL;
-    	size_t len = 0;
+		size_t len = 0;
 		if (fp == NULL) {
-  			printf("Unable to open file : %s\n", arg1);
-  		}
-  		else {
+			printf("Unable to open file : %s\n", arg1);
+		}
+		else {
 			while (getline(&line, &len, fp) != -1) {
 				if (line[strlen(line) - 1] == '\n') line[strlen(line) - 1] = '\0';
 				runCommand(line);
+				free(line);
 			}
 			fclose(fp);
-  		}
+		}
 	}
 	else if (strcmp(name,"load")==0) 	//loads files to XFS disk.
 	{
-		int fd;
-		fd = open(DISK_NAME, O_RDONLY, 0666);
-		if(fd < 0){
-		  printf("Unable to Open Disk File\n");
-		  return;
-		}
-		close(fd);
 		arg1 = strtok(NULL, " ");
 		arg2 = strtok(NULL, " ");	
 
 		char *int_command = strtok(arg1, "=");	
 		char *intType = strtok(NULL, "=");
-	    char *fileName = arg2;
-	    
+		char *fileName = arg2;
+		
 		if(fileName!=NULL)
 			fileName[50] = '\0';
 		else
@@ -446,8 +442,8 @@ void runCommand(char command[])
 		int fd;
 		fd = open(DISK_NAME, O_RDONLY, 0666);
 		if(fd < 0){
-		  printf("Unable to Open Disk File\n");
-		  return;
+			printf("Unable to Open Disk File\n");
+			return;
 		}
 		close(fd);
 		arg1 = strtok(NULL, " ");
@@ -455,8 +451,8 @@ void runCommand(char command[])
 		
 		char *int_command = strtok(arg1, "=");	
 		char *intType = strtok(NULL, "=");
-	    	char *fileName = arg2;;
-	    
+			char *fileName = arg2;;
+		
 		if(fileName!=NULL)
 			fileName[50] = '\0';				
 		if (strcmp(arg1,"--exec")==0)		
@@ -561,17 +557,18 @@ void runCommand(char command[])
 
 
 int main(int argc, char **argv){
-	int  intNo, fd;
+	int intNo, fd;
 	char fileName[51], option;
 	FILE* diskFp;
 	
+	disk_init();
 	fd = open(DISK_NAME, O_RDONLY, 0666);
 	if(fd > 0)
 	{
 		loadFileToVirtualDisk();
 	}
 	close(fd);
-		
+
 	cli(argc, argv);					//Loads the Command Line Interface
 	return 0;
 }

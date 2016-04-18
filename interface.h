@@ -1,6 +1,5 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
-#include "fileSystem.h"
 #define DO_NOT_FORMAT 0
 #define FORMAT 1
 
