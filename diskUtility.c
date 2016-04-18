@@ -1,5 +1,5 @@
-#include "fileUtility.h"
-
+#include "diskUtility.h"
+#include "exception.h"
 
 /*
  This function empties a block as specified by the first arguement in the memory copy of the disk file.
@@ -13,23 +13,21 @@ void emptyBlock(int blockNo)
 	}
 }
 
-/*
-  char* to int conversion
-*/
-int getValue(char* str ) 
-{
-	return atoi(str);
-}
-
 
 /*
-  int to char* conversion
+  This function frees the blocks specified by the block number present in the first arguement. The second arguement is the size
+  of the first argument.
+  The memory copy is not committed.
 */
-void storeValue(char *str, int num) 
-{
-	sprintf(str,"%d",num);
+void freeUnusedBlock(int *freeBlock, int size){
+	int i=0;
+	for( i = 0 ; i < size && freeBlock[i] != -1 && freeBlock[i] != 0; i++){
+		//printf("Block Num = %d\nLocation = %d", freeBlock[i],freeBlock[i] % BLOCK_SIZE );
+		storeValueAt(DISK_FREE_LIST * BLOCK_SIZE + freeBlock[i] , 0 );
+		emptyBlock(TEMP_BLOCK);
+		writeToDisk(TEMP_BLOCK,freeBlock[i]);
+	}
 }
-
 
 /*
  This function reads an entire BLOCK from the address specified from fileBlockNumber on the disk file to virtBlockNumber on the memory copy of the disk.
@@ -86,4 +84,60 @@ int loadFileToVirtualDisk()
 void clearVirtDisk()
 {
 	bzero(disk, sizeof(disk));
+}
+
+int openDiskFile()
+{
+	int fd;
+	fd = open(DISK_NAME, O_RDONLY, 0666);
+	if(fd < 0){
+	  exception_throwException(EXCEPTION_CANT_OPEN_DISK);
+	}
+	return fd;
+}
+
+/*
+	Tries to open the disk file, throws an exception if it fails.
+	An exception returns the control to the jmppoint set in interface.c
+*/
+void diskFileExists()
+{
+	close(openDiskFile());
+}
+
+
+/*
+  char* to int conversion
+  get integer value at address
+*/
+int getValueAt(int address)
+{
+	getValue( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)]);
+}
+
+/*
+  char* to int conversion
+ */
+
+int getValue(char* str ) 
+{
+	return atoi(str);
+}
+
+/*
+  int to char* conversion
+*/
+void storeValueAt(int address, int num) 
+{
+	storeValue( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)] , num );
+}
+
+void storeValue(char *str, int num) 
+{
+	sprintf(str,"%d",num);
+}
+
+void storeStringValueAt(int address, char *value) 
+{
+	strcpy( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)] , value );
 }

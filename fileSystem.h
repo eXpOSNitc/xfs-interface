@@ -118,14 +118,14 @@ Declarations for INODE Entry
 #define INODE_MAX_FILE_NUM 60
 #define INODE_MAX_BLOCK_NUM 4
 
-#define INODEENTRY_FILETYPE 0
-#define INODEENTRY_FILENAME 1
-#define INODEENTRY_FILESIZE 2
-#define INODEENTRY_USERID 3
-#define INODEENTRY_PERMISSION 4
-#define INODEENTRY_DATABLOCK 8
+#define INODE_ENTRY_FILETYPE 0
+#define INODE_ENTRY_FILENAME 1
+#define INODE_ENTRY_FILESIZE 2
+#define INODE_ENTRY_USERID 3
+#define INODE_ENTRY_PERMISSION 4
+#define INODE_ENTRY_DATABLOCK 8
 #define INODE_NUM_DATA_BLOCKS 4
-#define INODEENTRY_SIZE 16
+#define INODE_ENTRY_SIZE 16
 #define INODE_SIZE (NO_OF_INODE_BLOCKS * BLOCK_SIZE)
 
 
@@ -174,16 +174,6 @@ void listAllFiles();
 int deleteExecutableFromDisk(char *name);
 
 /*
-  This function removes the inode entry corresponding to the first arguement.
-*/
-int removeInodeEntry(int locationOfInode);
-
-/*
-  This function returns the basic block entry(pass by pointer) corresponding to the address specified by the second arguement.
-*/
-int getDataBlocks(int *basicBlockAddr, int locationOfInode);
-
-/*
   This function loads the executable file corresponding to the first arguement to an appropriate location on the disk.
 */
 int loadExecutableToDisk(char *name);
@@ -199,22 +189,6 @@ int CheckRepeatedName(char *name);
 int FindFreeBlock();
 
 /*
-  This function returns an  empty inode entry if present.
-*/
-int FindEmptyInodeEntry();
-
-/*
-  This function frees the blocks specified by the block numbers present in the first arguement. The second arguement is the size
-  of the first argument.
-*/
-void FreeUnusedBlock(int *freeBlock, int size);
-
-/*
-  This function adds the name, size and basic block address of the file to corresponding entry in the inode.
-*/
-void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, int size_of_file, int* addrOfDataBlocks);
-
-/*
   This function copies the necessary contents of a file to the corresponding location specified by the second arguemnt on the disk. The type specifies the type of file 
   to be copied.
 */
@@ -224,6 +198,11 @@ int writeFileToDisk(FILE *f, int blockNum, int type);
   This function loads the OS startup code specified by the first arguement to its appropriate location on disk.
 */
 int loadOSCode(char* name);
+
+/*
+  Returns the size of a unix data file in words
+*/
+int getDataFileSize(FILE *fp);
 
 /*
   This function copies the interrupts to the proper location on the disk.
@@ -303,6 +282,11 @@ int loadDataToDisk(char *name);
   This function deletes a data file from the disk.
 */
 int deleteDataFromDisk(char *name);
+
+/*
+  This function creates the disk file if not present. It also has an option for formatting or not.
+*/
+void formatDisk(int format);
 
 /*
   This function expands environment variables in path

@@ -1,8 +1,10 @@
 #include "fileSystem.h"
 #include "memOrg.h"
-#include<stdio.h>
-#include<stdlib.h>
-
+#include "inode.h"
+#include "diskUtility.h"
+#include "constants.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 void
 listAllFiles ()
@@ -13,7 +15,7 @@ listAllFiles ()
 
 	if (!list)
 	{
-		printf("The disk contains no file or the disk does not exist.\n");
+		printf("The disk contains no files.\n");
 		return;
 	}
 
@@ -34,13 +36,8 @@ listAllFiles ()
       shown as output.
 */
 XOSFILE* getAllFiles(){
-	int fd;
-	fd = open(DISK_NAME, O_RDONLY, 0666);
-	if(fd < 0){
-	  fprintf(stderr, "Unable to open disk file.\n");
-	  return NULL;
-	}
-	close(fd);
+	diskFileExists();
+	
 	int i,j;
 	XOSFILE *list, *curr_ptr;
 	int hasFiles = 0; 	// Flag which indicates if disk has no files
@@ -52,16 +49,16 @@ XOSFILE* getAllFiles(){
 
 	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++)
 	{
-		for(i = 0 ; i < BLOCK_SIZE ; i = i + INODEENTRY_SIZE)
+		for(i = 0 ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
 		{
-			if( getValue(disk[j].word[INODEENTRY_DATABLOCK + i]) > 0 )	// Negative value indicates invalid INODE
+			if( getValue(disk[j].word[INODE_ENTRY_DATABLOCK + i]) > 0 )	// Negative value indicates invalid INODE
 			{ 	
 				hasFiles = 1;
 				XOSFILE *new_entry;
 
 				new_entry = malloc (sizeof(XOSFILE));
-				new_entry->name = strdup(disk[j].word[i + INODEENTRY_FILENAME]);
-				new_entry->size = getValue(disk[j].word[i + INODEENTRY_FILESIZE]);
+				new_entry->name = strdup(disk[j].word[i + INODE_ENTRY_FILENAME]);
+				new_entry->size = getValue(disk[j].word[i + INODE_ENTRY_FILESIZE]);
 				curr_ptr->next = new_entry;
 				curr_ptr = new_entry;
 				curr_ptr->next = NULL;
@@ -81,97 +78,17 @@ XOSFILE* getAllFiles(){
     1. It checks the entry in the fat block. If a file with same name exists then the function returns the relative word
       address of the entry having the same name.
 */
-int CheckRepeatedName(char *name){
+int checkRepeatedName(char *name){
 	int i,j;
 	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++)
 	{
-		for(i = INODEENTRY_FILENAME ; i < BLOCK_SIZE ; i = i + INODEENTRY_SIZE)
+		for(i = INODE_ENTRY_FILENAME ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
 		{
 			if(strcmp(disk[j].word[i],name) == 0 && getValue(disk[j].word[i]) != -1)		
 				return (((j - INODE) * BLOCK_SIZE) + i);
 		}
 	}
 	return (((j - INODE)* BLOCK_SIZE) + i);
-}
-
-
-
-/*
-  This function returns the basic block entry(pass by pointer) corresponding to the address specified by the second arguement.
-  Third argument specifies the type of file (assembly code or data file)
-  NOTE: locationOfInode - relative word address of the name field in the fat.
-
-
-int getDataBlocks(int *basicBlockAddr, int locationOfInode)
-{
-	
-	int i,a;
-	basicBlockAddr[0] = getValue(disk[INODE + locationOfInode / BLOCK_SIZE].word[locationOfInode % BLOCK_SIZE + INODEENTRY_BASICBLOCK]);
-	emptyBlock(TEMP_BLOCK);
-	//printf("Basic Block = %d\n",basicBlockAddr[0]);
-	readFromDisk(TEMP_BLOCK,basicBlockAddr[0]);
-	
-	i = 0;
-	a = getValue(disk[TEMP_BLOCK].word[i]);
-	while ((a > 0) && i < INODE_MAX_BLOCK_NUM)
-	{
-		//printf("%d %d\t",i+1,a);
-		basicBlockAddr[i+1] = a;
-		i++;
-		a = getValue(disk[TEMP_BLOCK].word[i]);
-	}
-	
-	return 0;
-}
-*/
-/*
-  This function returns the  data block entries(pass by pointer) corresponding to the address specified by the locationOfInode.
-  Third argument specifies the type of file (assembly code or data file)
-  NOTE: locationOfInode - relative word address of the name field in the fat.
-*/
-int getDataBlocks_(int *dataBlockAddr, int locationOfInode)
-{
-	
-	int i,a;
-	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
-		dataBlockAddr[i] = getValue(disk[INODE + locationOfInode / BLOCK_SIZE].word[locationOfInode % BLOCK_SIZE + INODEENTRY_DATABLOCK + i]);
-	return 0;
-}
-
-
-/*
-  This function frees the blocks specified by the block number present in the first arguement. The second arguement is the size
-  of the first argument.
-  The memory copy is not committed.
-*/
-void FreeUnusedBlock(int *freeBlock, int size){
-	int i=0;
-	for( i = 0 ; i < size && freeBlock[i] != -1 && freeBlock[i] != 0; i++){
-		//printf("Block Num = %d\nLocation = %d", freeBlock[i],freeBlock[i] % BLOCK_SIZE );
-		storeValue( disk[DISK_FREE_LIST + freeBlock[i] / BLOCK_SIZE].word[freeBlock[i] % BLOCK_SIZE] , 0 );
-		emptyBlock(TEMP_BLOCK);
-		writeToDisk(TEMP_BLOCK,freeBlock[i]);
-	}
-}
-
-
-/*
-  This function removes the fat entry corresponding to the first arguement.
-  NOTE: locationOfInode - relative word address of the name field in the fat.
-  This is done as follows:
-    1. The name field is set to empty string.
-    2. The basic block entry is set to -1.
-  The memory copy is not committed.
-*/
-int removeInodeEntry(int locationOfInode){
-	int i;
-	int blockNumber = INODE + locationOfInode / BLOCK_SIZE;
-	int startWordNumber = locationOfInode % BLOCK_SIZE;
-	storeValue(disk[blockNumber].word[startWordNumber + INODEENTRY_FILENAME], -1);
-	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
-		storeValue(disk[blockNumber].word[startWordNumber + INODEENTRY_DATABLOCK + i], -1);
-	storeValue(disk[blockNumber].word[startWordNumber + INODEENTRY_FILESIZE], 0);
-	return 0;
 }
 
 
@@ -187,7 +104,7 @@ int deleteExecutableFromDisk(char *name)
 	int locationOfInode,i,blockAddresses[INODE_MAX_BLOCK_NUM];   //0-basic block , 1,2,3-code+data blocks
 	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
 		blockAddresses[i]=0;
-	locationOfInode = CheckRepeatedName(name);
+	locationOfInode = checkRepeatedName(name);
 	if(locationOfInode >= INODE_SIZE){
 		printf("File \'%s\' not found!\n",name);
 		return -1;
@@ -199,7 +116,7 @@ int deleteExecutableFromDisk(char *name)
 	}
 	
 	getDataBlocks_(blockAddresses,locationOfInode);		
-	FreeUnusedBlock(blockAddresses, INODE_MAX_BLOCK_NUM);
+	freeUnusedBlock(blockAddresses, INODE_MAX_BLOCK_NUM);
 	removeInodeEntry(locationOfInode);
 	for(i = INODE ; i < INODE + NO_OF_INODE_BLOCKS ; i++){
 		writeToDisk(i,i);
@@ -218,7 +135,7 @@ int deleteDataFromDisk(char *name)
 	int locationOfInode,i,blockAddresses[INODE_MAX_BLOCK_NUM+1];
 	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
 		blockAddresses[i]=0;   
-	locationOfInode = CheckRepeatedName(name);
+	locationOfInode = checkRepeatedName(name);
 	if(locationOfInode >= INODE_SIZE)
 	{
 		printf("File \'%s\' not found!\n",name);
@@ -231,7 +148,7 @@ int deleteDataFromDisk(char *name)
 	}
 	
 	getDataBlocks_(blockAddresses,locationOfInode);		
-	FreeUnusedBlock(blockAddresses, INODE_MAX_BLOCK_NUM);
+	freeUnusedBlock(blockAddresses, INODE_MAX_BLOCK_NUM);
 	removeInodeEntry(locationOfInode);
 	for(i = INODE ; i < INODE + NO_OF_INODE_BLOCKS ; i++){
 		writeToDisk(i,i);
@@ -252,10 +169,6 @@ int deleteINITFromDisk()
 	int i;
 	for (i=0; i<NO_OF_INIT_BLOCKS; i++)
 		writeToDisk(TEMP_BLOCK,INIT_BASIC_BLOCK+i);	
-
-	//writeToDisk(TEMP_BLOCK,INIT_BASIC_BLOCK);
-	//writeToDisk(TEMP_BLOCK,INIT_BASIC_BLOCK+1);
-	//writeToDisk(TEMP_BLOCK,INIT_BASIC_BLOCK+2);
 	return 0;
 }
 
@@ -344,46 +257,6 @@ int FindFreeBlock(){
 
 
 
-/*
-  This function returns an  empty fat entry if present.
-  NOTE: The return address will be the relative word address corresponding to the filename entry in the basic block.
-*/
-int FindEmptyInodeEntry(){
-	int i,j,entryFound = 0,entryNumber = 0;
-	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++){
-		for(i = INODEENTRY_DATABLOCK; i < BLOCK_SIZE ; i = i + INODEENTRY_SIZE){
-			if( getValue(disk[j].word[i]) == -1  ){
-				entryNumber = (((j - INODE) * BLOCK_SIZE) + i);
-				entryFound = 1;
-				break;
-			}
-		}
-		if(entryFound == 1)
-			break;
-	}
-	if( entryNumber > INODE_SIZE ){
-		printf("INODE  is full.\n");
-		return -1;
-	}
-	return (entryNumber-INODEENTRY_DATABLOCK);
-}
-
-
-
-/*
-  This function adds the name, size and basic block address of the file to corresponding entry in the fat.
-  The first arguement is a relative address
-*/
-void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, int size_of_file, int* addrOfDataBlocks){
-	int i;
-	storeValue( disk[INODE + (startIndexInInode / BLOCK_SIZE)].word[startIndexInInode % BLOCK_SIZE + INODEENTRY_FILETYPE] , fileType );
-	strcpy(disk[INODE + (startIndexInInode / BLOCK_SIZE)].word[startIndexInInode % BLOCK_SIZE + INODEENTRY_FILENAME],nameOfFile);
-	storeValue( disk[INODE + (startIndexInInode / BLOCK_SIZE)].word[startIndexInInode % BLOCK_SIZE + INODEENTRY_FILESIZE] , size_of_file );
-	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
-		storeValue( disk[INODE + (startIndexInInode / BLOCK_SIZE)].word[startIndexInInode % BLOCK_SIZE + INODEENTRY_DATABLOCK + i] , addrOfDataBlocks[i] );
-}
-
-
 
 /*
   This file copies the necessary contents of a file to the corresponding location specified by the second arguemnt on the disk.
@@ -396,7 +269,7 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 	int i, line=0,j;
 	char buffer[32],s[16],temp[100],c;
 	emptyBlock(TEMP_BLOCK);
-	if(type==0)			//writing files with assembly code
+	if(type==ASSEMBLY_CODE)			//writing files with assembly code
 	{
 		char *instr, *arg1, *arg2, *string_start;
 		int line_count=0,flag=0,k=0;
@@ -488,7 +361,7 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 		writeToDisk(TEMP_BLOCK,blockNum);
 		return 1;
 	}	
-	else if(type==1)			//writing data files
+	else if(type==DATA_FILE)			//writing data files
 	{
 		char buffer1[16],c;
 		for(i = 0; i < BLOCK_SIZE; i++)
@@ -507,22 +380,6 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 	}
 
 }
-
-int
-fs_load_exec (const char *fname)
-{
-	/* Determine whether we have space in the root file or not. */
-	int n_files = 0;//inode_get_count ();
-	char temp_file[66];
-
-	if (n_files >= INODE_MAX_FILE_NUM)
-	{
-		fprintf (stderr, "Disk full.\n");
-		return XFS_ERROR;
-	}
-}
-
-
 
 
 /*
@@ -580,20 +437,20 @@ int loadExecutableToDisk(char *name)
 	{
 		if((freeBlock[i] = FindFreeBlock()) == -1){
 				printf("Insufficient disk space!\n");
-				FreeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+				freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 				return -1;
 			}
 	}
-	i = CheckRepeatedName(filename);
+	i = checkRepeatedName(filename);
 	if( i < INODE_SIZE ){
 		printf("Disk already contains the file with this name. Try again with a different name.\n");
-		FreeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		return -1;
 	}
 	
 	k = FindEmptyInodeEntry();		
 	if( k == -1 ){
-		FreeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		printf("No free INODE entry found.\n");
 		return -1;			
 	}
@@ -629,11 +486,11 @@ int loadDataToDisk(char *name)
 {
 	FILE *fileToBeLoaded;
 	int freeBlock[INODE_MAX_BLOCK_NUM];
-	int i,j,k,num_of_chars=0,num_of_blocks_reqd=0,file_size=0,num_of_words=0;
+	int i,j,k,num_of_chars=0,num_of_blocks_reqd=0,file_size=0;
 	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
 		freeBlock[i]=-1;
 	char c='\0',*s;
-	char filename[50],buf[16];
+	char filename[50];
 	s = strrchr(name,'/');
 	if(s!=NULL)
 		strcpy(filename,s+1);
@@ -660,15 +517,7 @@ int loadDataToDisk(char *name)
 	
 	num_of_chars = ftell(fileToBeLoaded);
 	
-	fseek(fileToBeLoaded,0,SEEK_SET);
-	while(1)
-	{
-		fgets(buf,16,fileToBeLoaded);
-		num_of_words++;
-		if(feof(fileToBeLoaded))
-			break;
-	}
-	num_of_blocks_reqd = (num_of_words/512) + 1;
+	num_of_blocks_reqd = (getDataFileSize(fileToBeLoaded)/512+1) ;
 	//printf("\n Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
 	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
 	{
@@ -682,22 +531,22 @@ int loadDataToDisk(char *name)
 	{
 		if((freeBlock[i] = FindFreeBlock()) == -1){
 				printf("not sufficient space in disk to hold a new file.\n");
-				FreeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+				freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 				return -1;
 			}
 	}
-	i = CheckRepeatedName(filename);
+	i = checkRepeatedName(filename);
 	if( i < INODE_SIZE )
 	{
 		printf("Disk already contains the file with this name. Try again with a different name.\n");
-		FreeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		return -1;
 	}
 	
 	k = FindEmptyInodeEntry();		
 	if( k == -1 )
 	{
-		FreeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
+		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		printf("No free INODE entry found.\n");
 		return -1;			
 	}
@@ -725,6 +574,23 @@ int loadDataToDisk(char *name)
 	
 }
 
+/*
+	Returns the size of a unix data file in words
+*/
+int getDataFileSize(FILE *fp)
+{
+	int num_of_words=0;
+	char buf[16];
+	fseek(fp,0,SEEK_SET);
+	while(1)
+	{
+		fgets(buf,XSM_WORD_SIZE,fp);
+		num_of_words++;
+		if(feof(fp))
+			break;
+	}
+	return num_of_words;
+}
 
 /*
   This function copies the init program to its proper location on the disk.
@@ -993,21 +859,14 @@ int loadExHandlerToDisk(char* infile)
 */
 void displayFileContents(char *name)
 {
-	int fd;
-	fd = open(DISK_NAME, O_RDONLY, 0666);
-	if(fd < 0){
-	  printf("Unable to Open Disk File!\n");
-	  return;
-	}
-	
-	close(fd);
+	diskFileExists();
 	int i,j,k,l,flag=0,locationOfInode;
 	int blk[512];
 	
 	for(i=0;i<511;i++)
 		blk[i] = 0;
 	
-	locationOfInode = CheckRepeatedName(name);
+	locationOfInode = checkRepeatedName(name);
 	if(locationOfInode >= INODE_SIZE){
 		printf("File \'%s\' not found!\n",name);
 		return;
@@ -1037,13 +896,8 @@ void displayFileContents(char *name)
 */
 void copyBlocksToFile (int startblock,int endblock,char *filename)
 {
-	int fd;
-	fd = open(DISK_NAME, O_RDONLY, 0666);
-	if(fd < 0){
-	  printf("Unable to Open Disk File!\n");
-	  return;
-	}
-	close(fd);
+	diskFileExists();
+
 	int i,j;
 	FILE *fp;
 	expandpath(filename);
@@ -1073,13 +927,7 @@ void copyBlocksToFile (int startblock,int endblock,char *filename)
 */
 void displayDiskFreeList()
 {
-	int fd;
-	fd = open(DISK_NAME, O_RDONLY, 0666);
-	if(fd < 0){
-	  printf("Unable to Open Disk File!\n");
-	  return;
-	}
-	close(fd);
+	diskFileExists();
 	int i,j,no_of_free_blocks=0;
 	for(j = 0; j < NO_OF_FREE_LIST_BLOCKS; j++)
 	{
@@ -1094,6 +942,56 @@ void displayDiskFreeList()
 	printf("\nTotal no of Blocks = %d",NO_OF_DISK_BLOCKS);
 }
 
+/*
+  createDisk creates  the disk file if not present.
+  if format is equal to zero then the function creates the disk but does not format it.
+  if format is not equal to zero then the function will create and format the disk.
+  Formatting is done as follows:
+    1. A memory copy of the disk is maintained. This copy contains NO_BLOCKS_TO_COPY + EXTRA_BLOCKS (in this case 13 + 1) blocks.
+      The extra block is a temporary block. This memory copy is called the virtual disk. This is first cleared.
+    2. Then the memory freelist is initialised.
+    3. The fat blocks are also initialised. The basic block entries are all set to -1. The memory copy is then committed to the 
+      disk file.
+    4. Finally the entry for init process is made.
+*/
+void formatDisk(int format)
+{
+    int fd;
+    if(format)
+    {
+		fd = open(DISK_NAME, O_CREAT | O_TRUNC | O_SYNC, 0666);
+		clearVirtDisk();
+		close(fd);
+		int i=0,j=0,k;
+		
+		for(j=0; j<(NO_OF_FREE_LIST_BLOCKS*BLOCK_SIZE); j++)
+		{
+			i=j/BLOCK_SIZE;
+			if( (j>=DATA_START_BLOCK) && (j<NO_OF_DISK_BLOCKS ))
+				storeValue(disk[DISK_FREE_LIST+i].word[j], 0);
+			else
+				storeValue(disk[DISK_FREE_LIST+i].word[j], 1);
+		}
+		
+		for(i=0; i<NO_OF_FREE_LIST_BLOCKS;i++)
+			writeToDisk(DISK_FREE_LIST+i, DISK_FREE_LIST+i);
+			
+		for(j=0; j<NO_OF_INODE_BLOCKS; j++)
+		{
+			for(i=0; i<BLOCK_SIZE; i++)
+			{
+				storeValue(disk[INODE + j].word[i], -1);
+			}
+			writeToDisk(INODE+j, INODE+j);
+		}
+	}
+	else
+	{
+		fd = open(DISK_NAME, O_CREAT, 0666);
+		close(fd);
+	}
+	
+}
 
 
 // To expand environment variables in path

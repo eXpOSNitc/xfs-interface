@@ -5,6 +5,10 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "interface.h"
+#include "fileSystem.h"
+#include "exception.h"
+
+jmp_buf exp_point;//for exception handling
 
 /*
  * Strip unwanted characters.
@@ -46,9 +50,14 @@ void
 cli_run_with_completion ()
 {
 	char *line_read = NULL, *command;
-
+	int exp_occured;
+	exp_occured = setjmp(exp_point);
+	if(exp_occured)
+		exception_printErrorMessage(exp_occured);
 	while (1)
 	{
+		
+
 		/* Return the memory to the pool if needed. */
 		if (line_read)
 		{
@@ -313,7 +322,7 @@ void runCommand(char command[])
 	else if (strcmp(name,"fdisk")==0)	//formatting the disk with XFS partition
 	{
 		printf("Formatting Complete. \"disk.xfs\" created.\n");
-		createDisk(FORMAT);		
+		formatDisk(FORMAT);		
 	}
 	
 	else if (strcmp(name, "run") == 0)	//batch process commands from file
