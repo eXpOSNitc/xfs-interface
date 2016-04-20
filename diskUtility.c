@@ -468,13 +468,19 @@ int loadCodeWithLabels(char* infile, int disk_block, int no_of_disk_blocks, int 
 	expandpath(infile);
 	
 	char fileName[66];
-	
+	int ret;
+
 	labels_reset ();	
 	labels_resolve (infile, fileName, mem_page * PAGE_SIZE);
 
-	loadCode(fileName, disk_block, no_of_disk_blocks);
+	ret=loadCode(fileName, disk_block, no_of_disk_blocks);
 
-		//TODO add code to remove tempfile
+	if(remove(fileName))
+	{
+		printf("Error while trying to delete temporary file\n");
+	}
+
+	return ret;
 }
 
 /*
