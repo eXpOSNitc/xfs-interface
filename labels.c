@@ -82,28 +82,34 @@ labels_insert (char *label_name, int address)
 int
 labels_phase_two (FILE *fin, FILE *fout, int base_address)
 {
-	char line[ins_length];
+	char line[ins_length],instruction[ins_length];
 	char instr[XSM_WORD_SIZE];
-	int address = 0;
+	int address = 0,flag_isJumpOrCallIns;
 	const char *s = " ,";
 	char *opcode, *leftop, *rightop;
 	
 	fseek (fin, 0, SEEK_SET);
 	while (fgets(line, ins_length, fin))
 	{
-		opcode = strtok (line, s);
+		strncpy(instruction, line, ins_length);
+		opcode = strtok (instruction, s);
 		leftop = strtok (NULL, s);
 		rightop = strtok (NULL, s);
+		flag_isJumpOrCallIns = 0;
+
 		if (!strcasecmp (opcode, "JMP") || !strcasecmp(opcode, "CALL"))
 		{	
+			flag_isJumpOrCallIns = 1;
 			rightop = leftop;
 			leftop = "";
 		}
 		else if (!strcasecmp(opcode, "JNZ") || !strcasecmp(opcode, "JZ"))
 		{
+			flag_isJumpOrCallIns = 1;
 			strcat (leftop, ", "); 
 		}
-		if (labels_is_charstring(rightop))
+
+		if (flag_isJumpOrCallIns == 1 && labels_is_charstring(rightop))
 		{
 			address = labels_get_target (rightop);
 			
@@ -114,6 +120,10 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 			}
 			
 			fprintf (fout, "%s %s%d\n", opcode,leftop, address + base_address);
+		}
+		else
+		{
+			fprintf (fout, "%s\n", line);	
 		}
 	}
 	
@@ -141,7 +151,10 @@ int
 labels_is_charstring (char *str)
 {
 	char *p = str;
-	
+
+	if(!str)
+		return FALSE;
+
 	while (*p)
 	{
 		if (isalpha(*p))

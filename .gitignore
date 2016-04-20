@@ -3,5 +3,6 @@ disk.xfs
 *.dat
 *~
 *.o
-temp
+*.xsm
+temp*
 test

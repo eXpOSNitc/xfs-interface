@@ -72,6 +72,26 @@ int removeInodeEntry(int locationOfInode){
 
 
 /*
+	This function checks if a file having name as the first arguement is present on the disk file.
+	This is done as follows:
+	1. It checks the entry in the fat block. If a file with same name exists then the function returns the relative word
+	address of the entry having the same name.
+*/
+int getInodeEntry(char *name){
+	int i,j;
+	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++)
+	{
+		for(i = INODE_ENTRY_FILENAME ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
+		{
+			if(strcmp(disk[j].word[i], name) == 0 && getValue(disk[j].word[i]) != -1)		
+				return (((j - INODE) * BLOCK_SIZE) + i - INODE_ENTRY_FILENAME);
+		}
+	}
+	return (((j - INODE)* BLOCK_SIZE) + i - INODE_ENTRY_FILENAME);
+}
+
+
+/*
 	This function returns the data block entries(pass by pointer) corresponding to the address specified by the locationOfInode.
 	Third argument specifies the type of file (assembly code or data file)
 	NOTE: locationOfInode - relative word address of the name field in the fat.

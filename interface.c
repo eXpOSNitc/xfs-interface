@@ -305,15 +305,7 @@ void runCommand(char command[])
 		printf(" load --int=console <pathname>\n\t Loads Console Interrupt routine to XFS disk \n");
 		printf(" load --int=[4-18] <pathname>\n\t Loads the specified Interrupt routine to XFS disk \n");
 		printf(" load --exhandler <pathname> \n\t Loads exception handler routine to XFS disk \n");
-		printf(" rm --exec <xfs_filename>\n\t Removes an executable file from XFS disk \n");
-		printf(" rm --init <xfs_filename> \n\t Removes INIT code from XFS disk \n");
-		printf(" rm --data <xfs_filename>\n\t Removes a data file from XFS disk \n");
-		printf(" rm --os \n\t Removes OS startup code from XFS disk \n");
-		printf(" rm --int=timer \n\t Removes the Timer Interrupt routine from XFS disk \n");
-		printf(" rm --int=diskcontroller \n\t Removes the Disk Controller Interrupt routine from XFS disk \n");
-		printf(" rm --int=console \n\t Removes the Console Interrupt routine from XFS disk \n");
-		printf(" rm --int=[4-18] \n\t Removes the specified Interrupt routine from XFS disk \n");
-		printf(" rm --exhandler\n\t Removes the exception handler routine from XFS disk \n");
+		printf(" rm <xfs_filename>\n\t Removes a file from XFS disk \n");
 		printf(" ls \n\t List all files\n");
 		printf(" df \n\t Display free list and free space\n");
 		printf(" cat <xfs_filename> \n\t to display contents of a file\n");
@@ -340,7 +332,7 @@ void runCommand(char command[])
 			while (getline(&line, &len, fp) != -1) {
 				if (line[strlen(line) - 1] == '\n') line[strlen(line) - 1] = '\0';
 				runCommand(line);
-				free(line);
+				//free(line);
 			}
 			fclose(fp);
 		}
@@ -349,6 +341,7 @@ void runCommand(char command[])
 	{
 		arg1 = strtok(NULL, " ");
 		arg2 = strtok(NULL, " ");	
+		arg3 = strtok(NULL, " ");	
 
 		char *int_command = strtok(arg1, "=");	
 		char *intType = strtok(NULL, "=");
@@ -383,6 +376,12 @@ void runCommand(char command[])
 			
 		else if (strcmp(arg1,"--init")==0)	
 			loadINITCode(fileName);			 //loads init code to disk
+		else if (strcmp(arg1,"--shell")==0)	
+			loadShellCode(fileName);			 //loads init code to disk
+		else if (strcmp(arg1,"--library")==0)	
+			loadLibraryCode(fileName);			 //loads init code to disk
+		else if (strcmp(arg1,"--idle")==0)	
+			loadIdleCode(fileName);			 //loads init code to disk
 		else if (strcmp(arg1,"--data")==0) 
 		{
 			char *c;
@@ -429,6 +428,17 @@ void runCommand(char command[])
 				}
 			}
 		}
+		else if (strcmp(arg1,"--module")==0)
+		{
+			int intNo = atoi(arg2);
+			if(intNo >=0 && intNo <=NO_OF_MODULES)
+				loadModuleCode(arg3, intNo);
+			else
+			{
+				printf("Invalid argument for \"--module=\" \n");
+				return;
+			}
+		}
 		else if (strcmp(arg1,"--exhandler")==0) 
  			{
 				loadExHandlerToDisk(fileName);		 //loads exception handler routine to disk.
@@ -439,74 +449,17 @@ void runCommand(char command[])
 	
 	else if (strcmp(name,"rm")==0) 	//removes files to XFS disk.
 	{
-		int fd;
-		fd = open(DISK_NAME, O_RDONLY, 0666);
-		if(fd < 0){
-			printf("Unable to Open Disk File\n");
-			return;
-		}
-		close(fd);
 		arg1 = strtok(NULL, " ");
-		arg2 = strtok(NULL, " ");	
-		
-		char *int_command = strtok(arg1, "=");	
-		char *intType = strtok(NULL, "=");
-			char *fileName = arg2;;
-		
-		if(fileName!=NULL)
-			fileName[50] = '\0';				
-		if (strcmp(arg1,"--exec")==0)		
-		{
-			if(fileName==NULL)
-			{
-				printf("Missing <xfs_filename> for rm. See \"help\" for more information\n");
-				return;
-			}
-			deleteExecutableFromDisk(fileName);	 	//removes executable file fron disk.
-		}
-		else if (strcmp(arg1,"--init")==0)	
-			{
-				deleteINITFromDisk();			 	//removes init code from disk
-			}
-		else if (strcmp(arg1,"--data")==0) 
-		{
-			if(fileName==NULL)
-			{
-				printf("Missing <xfs_filename> for rm. See \"help\" for more information\n");
-				return;
-			}
-			deleteDataFromDisk(fileName);			 //removes data file from disk..		
-		}
-		else if (strcmp(arg1,"--os")==0)
-			{
-				deleteOSCodeFromDisk();			 	//removes OS code from disk.		
-			}
-		else if (strcmp(arg1,"--int")==0)
-		{
-			if(strcmp(intType,"timer")==0)
-			{
-				deleteTimerFromDisk();				//removes Timer interrupt routine from disk.
-			}
-			else
-			{
-				int intNo = atoi(intType);
-				if(intNo >=1 && intNo <= NO_OF_INTERRUPTS)
-					deleteIntCode(intNo);				//removes Int Code from disk.
-				else
-				{
-					printf("Invalid argument for \"--int=\" \n");
-					return;
-				}
-			}
-		}
-		else if (strcmp(arg1,"--exhandler")==0)
-			{
-				deleteExHandlerFromDisk();			 //removes exception handler routine from disk.			
-			}
-		else
-			printf("Invalid argument \"%s\" for rm. See \"help\" for more information\n",arg1);
+		deleteFileFromDisk(arg1);
 	}	
 	
+	else if (strcmp(name,"export")==0) 	//removes files to XFS disk.
+	{
+		arg1 = strtok(NULL, " ");
+		arg2 = strtok(NULL, " ");
+		exportFile(arg1,arg2);
+	}	
+
 	else if (strcmp(name,"ls")==0)		//Lists all files.
 		listAllFiles();
 		
@@ -529,6 +482,7 @@ void runCommand(char command[])
 			return;
 		}	
 	}
+
 	else if (strcmp(name,"copy")==0)		//Copies blocks from Disk to UNIX file.
 	{
 		arg1 = strtok(NULL, " ");
@@ -548,6 +502,22 @@ void runCommand(char command[])
 			copyBlocksToFile (startBlock,endBlock,fileName);
 		}	
 	}
+
+	else if (strcmp(name,"dump")==0) 	//loads files to XFS disk.
+	{
+		arg1 = strtok(NULL, " ");
+		if (strcmp(arg1,"--inodetable")==0)
+		{
+			dumpInodeTable("inodetable.txt");
+		}
+		else if(strcmp(arg1,"--rootfile")==0)
+		{
+			dumpRootFile("rootfile.txt");
+		}
+		else
+			printf("Invalid argument \"%s\" for dump. See \"help\" for more information\n",arg1);
+	}
+
 	else if (strcmp(name,"exit")==0)		//Exits the interface
 		exit(0);
 	else

@@ -41,26 +41,6 @@ void freeUnusedBlock(int *freeBlock, int size){
 
 
 /*
-	This function checks if a file having name as the first arguement is present on the disk file.
-	This is done as follows:
-	1. It checks the entry in the fat block. If a file with same name exists then the function returns the relative word
-	address of the entry having the same name.
-*/
-int checkRepeatedName(char *name){
-	int i,j;
-	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++)
-	{
-		for(i = INODE_ENTRY_FILENAME ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
-		{
-			if(strcmp(disk[j].word[i],name) == 0 && getValue(disk[j].word[i]) != -1)		
-				return (((j - INODE) * BLOCK_SIZE) + i);
-		}
-	}
-	return (((j - INODE)* BLOCK_SIZE) + i);
-}
-
-
-/*
 	This function returns the address of a free block on the disk.
 	The value returned will be the relative word address of the corresponding entry in the free list.
 */

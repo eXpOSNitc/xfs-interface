@@ -48,12 +48,15 @@ XOSFILE* getAllFiles()
 	2. Due to a technical glitch any string which is already stored on the disk will have to be searched in the
 		memory copy after appending a newline.
 */
-int deleteFileFromDisk(char *name,int max_num_blocks)
+int deleteFileFromDisk(char *name)
 {
-	int locationOfInode,i,blockAddresses[max_num_blocks];	//0-basic block , 1,2,3-code+data blocks
+	diskCheckFileExists();
+
+	int max_num_blocks = INODE_MAX_BLOCK_NUM;
+	int locationOfInode,i,blockAddresses[max_num_blocks];	//0,1,2,3-code+data blocks
 	for(i = 0; i < max_num_blocks; i++)
 		blockAddresses[i]=0;
-	locationOfInode = checkRepeatedName(name);
+	locationOfInode = getInodeEntry(name);
 	if(locationOfInode >= INODE_SIZE){
 		printf("File \'%s\' not found!\n",name);
 		return -1;
@@ -67,36 +70,14 @@ int deleteFileFromDisk(char *name,int max_num_blocks)
 }
 
 /*
-	This function deletes a data file from the disk.
+	This function clears the contents of disk blocks specified
 */
-int deleteExecutableFromDisk(char *name)
-{
-	
-	if(strstr(name,".xsm") == NULL)
-	{
-		printf("\'%s\' is not a valid executable file!\n",name);
-		return -1;
-	}
-	return deleteFileFromDisk(name,INODE_MAX_BLOCK_NUM);
-}
-
-/*
- 	This function deletes a data file from the disk.
-*/
-int deleteDataFromDisk(char *name)
-{
-	return deleteFileFromDisk(name,INODE_MAX_BLOCK_NUM);
-}
-
-/*
-	This function deletes the SPL code at the specified loacation from the disk.
-*/
-int deleteSPLFromDisk(int disk_block, int no_of_disk_blocks)
+int clearDiskBlocks(int disk_start_block, int no_of_disk_blocks)
 {
 	int i;
 	emptyBlock(TEMP_BLOCK);
 	for (i=0; i<no_of_disk_blocks; i++)
-		writeToDisk(TEMP_BLOCK, disk_block + i);	
+		writeToDisk(TEMP_BLOCK, disk_start_block + i);	
 	return 0;
 }
 
@@ -105,7 +86,7 @@ int deleteSPLFromDisk(int disk_block, int no_of_disk_blocks)
 */
 int deleteINITFromDisk()
 {
-	return deleteSPLFromDisk(INIT_BASIC_BLOCK, NO_OF_INIT_BLOCKS);
+	return clearDiskBlocks(INIT_BLOCK, NO_OF_INIT_BLOCKS);
 }
 
 /*
@@ -113,7 +94,7 @@ int deleteINITFromDisk()
 */
 int deleteOSCodeFromDisk()
 {
-	return deleteSPLFromDisk(OS_STARTUP_CODE, OS_STARTUP_CODE_SIZE);
+	return clearDiskBlocks(OS_STARTUP_CODE, OS_STARTUP_CODE_SIZE);
 }
 
 /*
@@ -121,24 +102,24 @@ int deleteOSCodeFromDisk()
 */
 int deleteTimerFromDisk()
 {
-	return deleteSPLFromDisk(TIMERINT, TIMERINT_SIZE);
+	return clearDiskBlocks(TIMERINT, TIMERINT_SIZE);
 }
 
 int deleteDiskControllerINTFromDisk()
 {
-	return deleteSPLFromDisk(DISKCONTROLLER_INT, DISKCONTROLLER_INT_SIZE);
+	return clearDiskBlocks(DISKCONTROLLER_INT, DISKCONTROLLER_INT_SIZE);
 }
 
 int deleteConsoleINTFromDisk()
 {
-	return deleteSPLFromDisk(CONSOLE_INT, CONSOLE_INT_SIZE);
+	return clearDiskBlocks(CONSOLE_INT, CONSOLE_INT_SIZE);
 }
 /*
 	This function deletes the Interrupt <intNo> from the disk.
 */
 int deleteIntCode(int intNo)
 {
-	return deleteSPLFromDisk(((intNo - 1) * INT1_SIZE) + INT1, INT1_SIZE);
+	return clearDiskBlocks(((intNo - 1) * INT1_SIZE) + INT1, INT1_SIZE);
 }
 
 /*
@@ -146,7 +127,7 @@ int deleteIntCode(int intNo)
 */
 int deleteExHandlerFromDisk()
 {
-	return deleteSPLFromDisk(EX_HANDLER, EX_HANDLER_SIZE);
+	return clearDiskBlocks(EX_HANDLER, EX_HANDLER_SIZE);
 }
 
 
@@ -333,7 +314,7 @@ int loadExecutableToDisk(char *name)
 				return -1;
 			}
 	}
-	i = checkRepeatedName(filename);
+	i = getInodeEntry(filename);
 	if( i < INODE_SIZE ){
 		printf("Disk already contains the file with this name. Try again with a different name.\n");
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
@@ -378,7 +359,7 @@ int loadDataToDisk(char *name)
 {
 	FILE *fileToBeLoaded;
 	int freeBlock[INODE_MAX_BLOCK_NUM];
-	int i,j,k,num_of_chars=0,num_of_blocks_reqd=0,file_size=0;
+	int i,j,k,num_of_chars=0,num_of_blocks_reqd=0,num_of_words,file_size=0;
 	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
 		freeBlock[i]=-1;
 	char c='\0',*s;
@@ -408,12 +389,13 @@ int loadDataToDisk(char *name)
 	fseek(fileToBeLoaded, 0L, SEEK_END);
 	
 	num_of_chars = ftell(fileToBeLoaded);
-	
-	num_of_blocks_reqd = (getDataFileSize(fileToBeLoaded)/512+1) ;
+	num_of_words = getDataFileSize(fileToBeLoaded);
+	num_of_blocks_reqd = (num_of_words / 512) ;
 	//printf("\n Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
 	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
 	{
-		printf("The size of file exceeds %d blocks",INODE_MAX_BLOCK_NUM);
+		printf("The size of file exceeds %d blocks\n",INODE_MAX_BLOCK_NUM);
+		printf("The file contains %d words, an xfs file can have only upto %d words\n", num_of_words, INODE_MAX_BLOCK_NUM * BLOCK_SIZE);
 		return -1;
 	}
 	
@@ -422,12 +404,13 @@ int loadDataToDisk(char *name)
 	for(i = 0; i < num_of_blocks_reqd; i++)
 	{
 		if((freeBlock[i] = FindFreeBlock()) == -1){
-				printf("not sufficient space in disk to hold a new file.\n");
+				printf("Disk does not have enough space to contain the file.\n");
 				freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 				return -1;
 			}
 	}
-	i = checkRepeatedName(filename);
+
+	i = getInodeEntry(filename);
 	if( i < INODE_SIZE )
 	{
 		printf("Disk already contains the file with this name. Try again with a different name.\n");
@@ -468,7 +451,7 @@ int loadDataToDisk(char *name)
 int getDataFileSize(FILE *fp)
 {
 	int num_of_words=0;
-	char buf[16];
+	char buf[XSM_WORD_SIZE];
 	fseek(fp,0,SEEK_SET);
 	while(1)
 	{
@@ -480,12 +463,7 @@ int getDataFileSize(FILE *fp)
 	return num_of_words;
 }
 
-/*
-	This function loads the SPL code specified by the first argument to the specified location on disk.
-	labels in code are replaced by mem addresses, taking the given MEM_PAGE as memory base address
-	The code is first copied to memory copy. If this copying proceeds properly then the memory copy is committed to the disk.
-*/
-int loadSPLCode(char* infile, int disk_block, int no_of_disk_blocks, int mem_page)
+int loadCodeWithLabels(char* infile, int disk_block, int no_of_disk_blocks, int mem_page)
 {
 	expandpath(infile);
 	
@@ -493,7 +471,19 @@ int loadSPLCode(char* infile, int disk_block, int no_of_disk_blocks, int mem_pag
 	
 	labels_reset ();	
 	labels_resolve (infile, fileName, mem_page * PAGE_SIZE);
-	
+
+	loadCode(fileName, disk_block, no_of_disk_blocks);
+
+		//TODO add code to remove tempfile
+}
+
+/*
+	This function loads the code specified by the first argument to the specified location on disk.
+	labels in code are replaced by mem addresses, taking the given MEM_PAGE as memory base address
+	The code is first copied to memory copy. If this copying proceeds properly then the memory copy is committed to the disk.
+*/
+int loadCode(char* fileName, int disk_start_block, int no_of_disk_blocks)
+{
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)
@@ -504,16 +494,14 @@ int loadSPLCode(char* infile, int disk_block, int no_of_disk_blocks, int mem_pag
 	
 	for(i=0;i<no_of_disk_blocks;i++)
 	{
-		j = writeFileToDisk(fp, disk_block + i, ASSEMBLY_CODE);
+		j = writeFileToDisk(fp, disk_start_block + i, ASSEMBLY_CODE);
 		if (j != 1)
 			break;
 	}
 	if(j==1)
 	{
-		printf("Code exceeds %d block\n",DISKCONTROLLER_INT_SIZE);
-		deleteSPLFromDisk(disk_block,no_of_disk_blocks);
-		//emptyBlock(TEMP_BLOCK);
-		//writeToDisk(TEMP_BLOCK,TIMERINT);
+		printf("Code exceeds %d block\n",no_of_disk_blocks);
+		clearDiskBlocks(disk_start_block,no_of_disk_blocks);
 	}
 	close(fp);
 	return 0;
@@ -524,7 +512,31 @@ int loadSPLCode(char* infile, int disk_block, int no_of_disk_blocks, int mem_pag
 */
 int loadINITCode(char* infile )
 {
-	return loadSPLCode(infile, INIT_BASIC_BLOCK, NO_OF_INIT_BLOCKS, MEM_INIT_BASIC_BLOCK);
+	return loadCode(infile, INIT_BLOCK, NO_OF_INIT_BLOCKS);
+}
+
+/*
+	This function copies the idle program to its proper location on the disk.
+*/
+int loadIdleCode(char* infile )
+{
+	return loadCode(infile, IDLE_BLOCK, NO_OF_IDLE_BLOCKS);
+}
+
+/*
+	This function copies the shell program to its proper location on the disk.
+*/
+int loadShellCode(char* infile )
+{
+	return loadCode(infile, SHELL_BLOCK, NO_OF_SHELL_BLOCKS);
+}
+
+/*
+	This function copies the library to its proper location on the disk.
+*/
+int loadLibraryCode(char* infile )
+{
+	return loadCodeWithLabels(infile, LIBRARY_BLOCK, NO_OF_LIBRARY_BLOCKS, MEM_LIBRARY_PAGE);
 }
 
 /*
@@ -533,17 +545,17 @@ int loadINITCode(char* infile )
 */
 int loadOSCode(char* infile)
 {
-	return loadSPLCode(infile, OS_STARTUP_CODE, OS_STARTUP_CODE_SIZE, MEM_OS_STARTUP_CODE);
+	return loadCodeWithLabels(infile, OS_STARTUP_CODE, OS_STARTUP_CODE_SIZE, MEM_OS_STARTUP_CODE);
 }
 
 int loadDiskControllerIntCode(char* infile)
 {
-	return loadSPLCode(infile, DISKCONTROLLER_INT, DISKCONTROLLER_INT_SIZE, MEM_DISKCONTROLLER_INT);
+	return loadCodeWithLabels(infile, DISKCONTROLLER_INT, DISKCONTROLLER_INT_SIZE, MEM_DISKCONTROLLER_INT);
 }
 
 int loadConsoleIntCode(char* infile)
 {
-	return loadSPLCode(infile, CONSOLE_INT, CONSOLE_INT_SIZE, MEM_CONSOLE_INT);
+	return loadCodeWithLabels(infile, CONSOLE_INT, CONSOLE_INT_SIZE, MEM_CONSOLE_INT);
 }
 
 /*
@@ -551,15 +563,22 @@ int loadConsoleIntCode(char* infile)
 */
 int loadIntCode(char* infile, int intNo)
 {
-	return loadSPLCode(infile,((intNo - 1) * INT1_SIZE) + INT1, INT1_SIZE, ((intNo - 1) * MEM_INT1_SIZE) + MEM_INT1 );
+	return loadCodeWithLabels(infile,((intNo - 1) * INT_SIZE) + INT1, INT_SIZE, ((intNo - 1) * MEM_INT_SIZE) + MEM_INT1 );
 }
 
+/*
+	This function copies the module code to the proper location on the disk.
+*/
+int loadModuleCode(char* infile, int modNo)
+{
+	return loadCodeWithLabels(infile,(modNo * MOD_SIZE) + MOD0, MOD_SIZE, (modNo * MEM_MOD_SIZE) + MEM_MOD0 );
+}
 /*
 	This function copies the timer interrupt to the proper location on the disk.
 */
 int loadTimerCode(char* infile)
 {
-	return loadSPLCode(infile, TIMERINT, TIMERINT_SIZE, MEM_TIMERINT);
+	return loadCodeWithLabels(infile, TIMERINT, TIMERINT_SIZE, MEM_TIMERINT);
 }
 
 /*
@@ -567,10 +586,8 @@ int loadTimerCode(char* infile)
 */
 int loadExHandlerToDisk(char* infile)
 {
-	return loadSPLCode(infile, EX_HANDLER, EX_HANDLER_SIZE, MEM_EX_HANDLER);
+	return loadCodeWithLabels(infile, EX_HANDLER, EX_HANDLER_SIZE, MEM_EX_HANDLER);
 }
-
-
 
 /*
 	This function displays the content of the files stored in the disk.
@@ -579,21 +596,20 @@ void displayFileContents(char *name)
 {
 	diskCheckFileExists();
 	int i,j,k,l,flag=0,locationOfInode;
-	int blk[512];
+	int blk[INODE_NUM_DATA_BLOCKS];
 	
-	for(i=0;i<511;i++)
+	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		blk[i] = 0;
 	
-	locationOfInode = checkRepeatedName(name);
+	locationOfInode = getInodeEntry(name);
 	if(locationOfInode >= INODE_SIZE){
 		printf("File \'%s\' not found!\n",name);
 		return;
 	}
-	
-	
+		
 	getDataBlocks(blk,locationOfInode);
 
-	k = 1;
+	k = 0;
 	while (blk[k] > 0)
 	{
 		emptyBlock(TEMP_BLOCK);
@@ -612,7 +628,7 @@ void displayFileContents(char *name)
 /*
 	This function copies the contents of the disk starting from <startBlock> to <endBlock> to a unix file.
 */
-void copyBlocksToFile (int startblock,int endblock,char *filename)
+int copyBlocksToFile (int startblock,int endblock,char *filename)
 {
 	diskCheckFileExists();
 
@@ -623,6 +639,7 @@ void copyBlocksToFile (int startblock,int endblock,char *filename)
 	if(fp == NULL)
 	{
 		printf("File \'%s\' not found!\n", filename);
+		return -1;
 	}
 	else
 	{
@@ -637,6 +654,7 @@ void copyBlocksToFile (int startblock,int endblock,char *filename)
 		}
 		fclose(fp);
 	}
+	return 0;
 }
 
 /*
@@ -657,7 +675,7 @@ void displayDiskFreeList()
 		}
 	}
 	printf("\nNo of Free Blocks = %d",no_of_free_blocks);
-	printf("\nTotal no of Blocks = %d",NO_OF_DISK_BLOCKS);
+	printf("\nTotal no of Blocks = %d\n",NO_OF_DISK_BLOCKS);
 }
 
 /*
@@ -694,6 +712,68 @@ void formatDisk(int format)
 	
 }
 
+
+/*
+	Copies the contents of rootfile to a unix file with given name
+*/
+int dumpRootFile(const char* filename)
+{
+	return copyBlocksToFile(ROOT_FILE, ROOT_FILE + ROOT_FILE_SIZE - 1, strdup(filename));
+}
+
+
+/*
+	Copies the contents of inode table to a unix file with given name
+*/
+int dumpInodeTable(const char* filename)
+{
+	return copyBlocksToFile(INODE, ROOT_FILE + INODE_SIZE - 1, strdup(filename));
+}
+
+/*
+	This function export the contents of a xfs-file with given name, to a unix file whose path is specifile.
+*/
+void exportFile(char *filename, char *unixfile)
+{
+	diskCheckFileExists();
+
+	int i,j,k,l,flag=0,locationOfInode;
+	int blk[INODE_NUM_DATA_BLOCKS];
+	FILE *outFile;
+
+	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
+		blk[i] = 0;
+	
+	locationOfInode = getInodeEntry(filename);
+	if(locationOfInode >= INODE_SIZE){
+		printf("File \'%s\' not found!\n",filename);
+		return;
+	}
+		
+	getDataBlocks(blk,locationOfInode);
+
+	expandpath(unixfile);
+	outFile = fopen(unixfile,"w");
+	if(outFile == NULL)
+	{
+		printf("File \'%s\' not found!\n", unixfile);
+	}
+
+	k = 0;
+	while (blk[k] > 0)
+	{
+		emptyBlock(TEMP_BLOCK);
+		readFromDisk(TEMP_BLOCK,blk[k]);
+		for(l=0;l<BLOCK_SIZE;l++)
+		{
+			if(strcmp(disk[TEMP_BLOCK].word[l],"\0")!=0)
+				fprintf(outFile,"%s",disk[TEMP_BLOCK].word[l]);
+		}
+		//printf("next block\n");
+		emptyBlock(TEMP_BLOCK);
+		k++;
+	}
+}
 
 // To expand environment variables in path
 void expandpath(char *path) 		

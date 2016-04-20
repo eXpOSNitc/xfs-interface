@@ -6,7 +6,6 @@
 void _getAllFilesdisk_init();
 void emptyBlock(int blockNo);
 void freeUnusedBlock(int *freeBlock, int size);
-int checkRepeatedName(char *name);
 int FindFreeBlock();
 void setDefaultValues(int dataStructure);
 void commitMemCopyToDisk(int dataStructure);

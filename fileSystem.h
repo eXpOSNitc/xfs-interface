@@ -8,9 +8,10 @@
 #define DISK_FREE_LIST 2
 #define INODE 3
 #define ROOT_FILE 5
-#define INIT_BASIC_BLOCK 7
-#define SHELL_BASIC_BLOCK 9
-#define LIBRARY 13
+#define INIT_BLOCK 7
+#define SHELL_BLOCK 9
+#define IDLE_BLOCK 11
+#define LIBRARY_BLOCK 13
 #define EX_HANDLER 15
 #define TIMERINT 17
 #define DISKCONTROLLER_INT 19
@@ -49,7 +50,8 @@
 #define ROOT_FILE_SIZE 1
 #define NO_OF_INIT_BLOCKS 2
 #define NO_OF_SHELL_BLOCKS 2
-#define NO_OF_LIBRARY_BLOCKS 13
+#define NO_OF_IDLE_BLOCKS 2
+#define NO_OF_LIBRARY_BLOCKS 2
 #define EX_HANDLER_SIZE 2
 #define TIMERINT_SIZE 2
 #define DISKCONTROLLER_INT_SIZE 2
@@ -73,6 +75,7 @@
 #define INT16_SIZE 2
 #define INT17_SIZE 2
 #define INT18_SIZE 2
+#define INT_SIZE INT4_SIZE
 #define MOD0_SIZE 2
 #define MOD1_SIZE 2
 #define MOD2_SIZE 2
@@ -81,14 +84,13 @@
 #define MOD5_SIZE 2
 #define MOD6_SIZE 2
 #define MOD7_SIZE 2
+#define MOD_SIZE MOD0_SIZE
 
 #define INODE 3
 #define NO_OF_INODE_BLOCKS 2
 
-
-#define INIT_NAME "init.xsm"
-
 #define NO_OF_INTERRUPTS 18
+#define NO_OF_MODULES 8
 
 #define DATA_START_BLOCK 69
 #define NO_OF_DATA_BLOCKS 187
@@ -114,7 +116,7 @@ Declarations for INODE Entry
 #define INODE_ENTRY_USERID 3
 #define INODE_ENTRY_PERMISSION 4
 #define INODE_ENTRY_DATABLOCK 8
-#define INODE_NUM_DATA_BLOCKS 4
+#define INODE_NUM_DATA_BLOCKS INODE_MAX_BLOCK_NUM
 #define INODE_ENTRY_SIZE 16
 #define INODE_SIZE (NO_OF_INODE_BLOCKS * BLOCK_SIZE)
 
