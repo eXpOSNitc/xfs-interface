@@ -297,19 +297,26 @@ void runCommand(char command[])
 	{
 		printf(" fdisk \n\t Format the disk with XFS filesystem\n");
 		printf(" load --exec <pathname> \n\t Loads an executable file to XFS disk \n");
-		printf(" load --init <pathname> \n\t Loads INIT code to XFS disk \n");
 		printf(" load --data <pathname> \n\t Loads a data file to XFS disk \n");
+		printf(" load --init <pathname> \n\t Loads INIT code to XFS disk \n");
 		printf(" load --os <pathname> \n\t Loads OS startup code to XFS disk \n");
+		printf(" load --idle <pathname> \n\t Loads Idle code to XFS disk \n");
+		printf(" load --shell <pathname> \n\t Loads Shell code to XFS disk \n");
+		printf(" load --library <pathname> \n\t Loads Library code to XFS disk \n");
 		printf(" load --int=timer <pathname>\n\t Loads Timer Interrupt routine to XFS disk \n");
-		printf(" load --int=diskcontroller <pathname>\n\t Loads Disk Controller Interrupt routine to XFS disk \n");
+		printf(" load --int=disk <pathname>\n\t Loads Disk Controller Interrupt routine to XFS disk \n");
 		printf(" load --int=console <pathname>\n\t Loads Console Interrupt routine to XFS disk \n");
 		printf(" load --int=[4-18] <pathname>\n\t Loads the specified Interrupt routine to XFS disk \n");
 		printf(" load --exhandler <pathname> \n\t Loads exception handler routine to XFS disk \n");
+		printf(" load --module [0-7] <pathname>\n\t Loads the specified Module to XFS disk \n");
+		printf(" export <xfs_filename> <pathname>\n\t Exports a data file from XFS disk to UNIX file system\n");
 		printf(" rm <xfs_filename>\n\t Removes a file from XFS disk \n");
 		printf(" ls \n\t List all files\n");
 		printf(" df \n\t Display free list and free space\n");
 		printf(" cat <xfs_filename> \n\t to display contents of a file\n");
 		printf(" copy <start_blocks> <end_block> <unix_filename>\n\t Copies contents of specified range of blocks to a UNIX file.\n");
+		printf(" dump --inodetable \n\t Copies the contents of inode table to an external UNIX file named inodetable.txt\n");
+		printf(" dump --rootfile \n\t Copies the contents of root file to an external UNIX file named inodetable.txt\n");
 		printf(" exit \n\t Exit the interface\n");
 	}
 	
@@ -408,7 +415,7 @@ void runCommand(char command[])
 			{
 				loadTimerCode(fileName);
 			}
-			else if(strcmp(intType,"diskcontroller")==0)
+			else if(strcmp(intType,"disk")==0)
 			{
 				loadDiskControllerIntCode(fileName);
 			}

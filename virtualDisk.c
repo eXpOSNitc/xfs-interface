@@ -84,6 +84,23 @@ void setDefaultValues(int dataStructure)
 
 				for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
 					storeValue(disk[INODE + j].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+
+				for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
+					strcpy(disk[INODE + j].word[INODE_ENTRY_FILENAME + i],"");//Set "" to filename of all entries
+			}
+			break;
+
+		case ROOTFILE:
+			for(j=0; j<NO_OF_ROOTFILE_BLOCKS; j++)
+			{
+				for(i=0; i<BLOCK_SIZE; i++)
+					storeValue(disk[ROOTFILE + j].word[i], -1);//Enters -1 to all INODE ENTRIES
+
+				for(i=0; i<BLOCK_SIZE; i+=ROOTFILE_ENTRY_SIZE)
+					storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+
+				for(i=0; i<BLOCK_SIZE; i+=ROOTFILE_ENTRY_SIZE)
+					strcpy(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILENAME + i],"");//Set 0 to filesize of all entries
 			}
 			break;
 	}
@@ -102,9 +119,12 @@ void commitMemCopyToDisk(int dataStructure)
 				writeToDisk(DISK_FREE_LIST + i, DISK_FREE_LIST + i);
 			break;
 
-		case INODE:
+		case INODE://in case of inode, root file is also committed along with it
 			for(i=0; i<NO_OF_INODE_BLOCKS; i++)
 				writeToDisk(INODE + i, INODE + i);
+		case ROOTFILE:
+			for(i=0; i<NO_OF_ROOTFILE_BLOCKS; i++)
+				writeToDisk(ROOTFILE + i, ROOTFILE + i);
 			break;
 	}
 }

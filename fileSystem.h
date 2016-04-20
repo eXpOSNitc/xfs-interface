@@ -7,7 +7,7 @@
 #define OS_STARTUP_CODE 0
 #define DISK_FREE_LIST 2
 #define INODE 3
-#define ROOT_FILE 5
+#define ROOTFILE 5
 #define INIT_BLOCK 7
 #define SHELL_BLOCK 9
 #define IDLE_BLOCK 11
@@ -47,7 +47,7 @@
 
 #define OS_STARTUP_CODE_SIZE 2
 #define NO_OF_FREE_LIST_BLOCKS 1
-#define ROOT_FILE_SIZE 1
+#define NO_OF_ROOTFILE_BLOCKS 1
 #define NO_OF_INIT_BLOCKS 2
 #define NO_OF_SHELL_BLOCKS 2
 #define NO_OF_IDLE_BLOCKS 2
@@ -122,7 +122,20 @@ Declarations for INODE Entry
 
 #define FILETYPE_ROOT 1
 #define FILETYPE_DATA 2
-#define FILETYPE_EXEC 3
+#define FILETYPE_EXEC 3 //TODO check whether these are used
+
+
+/*
+	Root File Declarations
+*/
+
+#define ROOTFILE_ENTRY_FILENAME 0
+#define ROOTFILE_ENTRY_FILESIZE 1
+#define ROOTFILE_ENTRY_FILETYPE 2
+#define ROOTFILE_ENTRY_USERNAME 3
+#define ROOTFILE_ENTRY_PERMISSION 4
+#define ROOTFILE_ENTRY_SIZE 8
+
 
 /*
 Other declarations

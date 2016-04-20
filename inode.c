@@ -32,29 +32,63 @@ int FindEmptyInodeEntry(){
 }
 
 
+/*
+	This function adds the type, name and size of the file to corresponding entry in the rootfile.
+*/
+void AddEntryToMemRootFile(int startIndexInRootFile, int fileType, char *nameOfFile, int size_of_file)
+{
+	int baseAddress=ROOTFILE * BLOCK_SIZE + startIndexInRootFile;
+	storeStringValueAt( baseAddress + ROOTFILE_ENTRY_FILENAME, nameOfFile);
+	storeValueAt( baseAddress + ROOTFILE_ENTRY_FILESIZE , size_of_file );
+	storeValueAt( baseAddress + ROOTFILE_ENTRY_FILETYPE, fileType );
+}
 
 /*
-	This function adds the name, size and basic block address of the file to corresponding entry in the fat.
+	This function adds the name, size and data block addresses of the file to corresponding entry in the inode.
 	The first arguement is a relative address
+	An entry is also added in the root file
 */
 void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, int size_of_file, int* addrOfDataBlocks){
 
 	int i,baseAddress=INODE * BLOCK_SIZE + startIndexInInode;
-
 	storeValueAt( baseAddress + INODE_ENTRY_FILETYPE, fileType );
 	storeStringValueAt( baseAddress + INODE_ENTRY_FILENAME, nameOfFile);
 	storeValueAt( baseAddress + INODE_ENTRY_FILESIZE , size_of_file );
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValueAt( baseAddress + INODE_ENTRY_DATABLOCK + i , addrOfDataBlocks[i] );
+	AddEntryToMemRootFile(startIndexInInode/INODE_ENTRY_SIZE*ROOTFILE_ENTRY_SIZE, fileType, nameOfFile, size_of_file);
 }
 
+
+/*
+	This function removes the Root file entry corresponding to the first arguement.
+	NOTE: locationOfRootFile - relative word address of the name field in the RootFile.
+	This is done as follows:
+	1. The name field is set to empty string.
+	2. filetype is set to -1.
+	3. filesize is set to 0.
+	The memory copy is not committed.
+*/
+int removeRootFileEntry(int locationOfRootFile){
+	int i;
+	int blockNumber = INODE + locationOfRootFile / BLOCK_SIZE;
+	int startWordNumber = locationOfRootFile % BLOCK_SIZE;
+
+	storeValue(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILETYPE], -1);
+	strcpy(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILENAME], "");
+	storeValue(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILESIZE], 0);
+	return 0;
+}
 
 /*
 	This function removes the fat entry corresponding to the first arguement.
 	NOTE: locationOfInode - relative word address of the name field in the fat.
 	This is done as follows:
 	1. The name field is set to empty string.
-	2. The basic block entry is set to -1.
+	2. The data block entries is set to -1.
+	3. filetype set to -1
+	4. filesize set to 0
+	Corresponding root file entry is also removed.
 	The memory copy is not committed.
 */
 int removeInodeEntry(int locationOfInode){
@@ -67,9 +101,9 @@ int removeInodeEntry(int locationOfInode){
 	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILESIZE], 0);
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_DATABLOCK + i], -1);
+	removeRootFileEntry(locationOfInode / INODE_ENTRY_SIZE * ROOTFILE_ENTRY_SIZE);
 	return 0;
 }
-
 
 /*
 	This function checks if a file having name as the first arguement is present on the disk file.

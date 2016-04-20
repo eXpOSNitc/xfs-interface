@@ -4,5 +4,6 @@ disk.xfs
 *~
 *.o
 *.xsm
+*.txt
 temp*
 test

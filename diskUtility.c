@@ -698,18 +698,31 @@ void displayDiskFreeList()
 */
 void formatDisk(int format)
 {
-	int fd;
+	int fd,rootFileDataBlocks[INODE_NUM_DATA_BLOCKS];
 	if(format)
 	{
 		createDiskFile(DISK_NO_FORMAT);
 		clearVirtDisk();
-		int i=0,j=0,k;
+		int i=0;
 		
 		setDefaultValues(DISK_FREE_LIST);
 		commitMemCopyToDisk(DISK_FREE_LIST);
 		
 		setDefaultValues(INODE);
+		setDefaultValues(ROOTFILE);
+
+		for(i = 0; i < INODE_NUM_DATA_BLOCKS; i++)//Add root file blocks address to an array
+		{
+			if(i < NO_OF_ROOTFILE_BLOCKS)
+				rootFileDataBlocks[i] = ROOTFILE + i;
+			else
+				rootFileDataBlocks[i] = -1;
+		}
+
+		AddEntryToMemInode(0, FILETYPE_ROOT, "root", NO_OF_ROOTFILE_BLOCKS, rootFileDataBlocks);
+
 		commitMemCopyToDisk(INODE);
+		commitMemCopyToDisk(ROOTFILE);//Not necessary since currently it is configured to automatically commit ROOTFILE along with INODE 
 	}
 	else
 	{
@@ -724,7 +737,7 @@ void formatDisk(int format)
 */
 int dumpRootFile(const char* filename)
 {
-	return copyBlocksToFile(ROOT_FILE, ROOT_FILE + ROOT_FILE_SIZE - 1, strdup(filename));
+	return copyBlocksToFile(ROOTFILE, ROOTFILE + NO_OF_ROOTFILE_BLOCKS - 1, strdup(filename));
 }
 
 
@@ -733,7 +746,7 @@ int dumpRootFile(const char* filename)
 */
 int dumpInodeTable(const char* filename)
 {
-	return copyBlocksToFile(INODE, ROOT_FILE + INODE_SIZE - 1, strdup(filename));
+	return copyBlocksToFile(INODE, ROOTFILE + INODE_SIZE - 1, strdup(filename));
 }
 
 /*
