@@ -746,7 +746,7 @@ int dumpRootFile(const char* filename)
 */
 int dumpInodeTable(const char* filename)
 {
-	return copyBlocksToFile(INODE, ROOTFILE + INODE_SIZE - 1, strdup(filename));
+	return copyBlocksToFile(INODE, INODE + NO_OF_INODE_BLOCKS - 1, strdup(filename));
 }
 
 /*
