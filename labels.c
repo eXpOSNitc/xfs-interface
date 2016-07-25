@@ -22,19 +22,6 @@ labels_reset ()
 	_root = NULL;
 }
 
-void
-labels_print ()
-{
-	label *ptr = _root, *next;
-	
-	while (ptr != NULL)
-	{
-		next = ptr->next;
-		ptr = next;
-	}
-	
-}
-
 int 
 labels_phase_one(FILE *fp)
 {
@@ -189,7 +176,7 @@ int
 labels_resolve (const char *filename, char *outfile, int base_address)
 {
 	FILE *fin, *ftemp;
-	
+		
 	fin = fopen (filename, "r");
 	
 	if (!fin)
@@ -208,8 +195,6 @@ labels_resolve (const char *filename, char *outfile, int base_address)
 	}
 	
 	labels_phase_one (fin);
-	
-	labels_print();
 
 	labels_phase_two (fin, ftemp, base_address);	
 	
