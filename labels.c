@@ -22,6 +22,19 @@ labels_reset ()
 	_root = NULL;
 }
 
+void
+labels_print ()
+{
+	label *ptr = _root, *next;
+	
+	while (ptr != NULL)
+	{
+		next = ptr->next;
+		ptr = next;
+	}
+	
+}
+
 int 
 labels_phase_one(FILE *fp)
 {
@@ -58,9 +71,8 @@ char*
 labels_get_name (char *label)
 {
 	const char *delim = ":";
-	strtok (label, delim);
 	
-	return strdup(strtok(NULL, delim));
+	return strdup(strtok(label, delim));
 }
 
 void
@@ -86,16 +98,24 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 	char instr[XSM_WORD_SIZE];
 	int address = 0,flag_isJumpOrCallIns;
 	const char *s = " ,";
-	char *opcode, *leftop, *rightop;
+	char *opcode, *leftop, *rightop, *sep;
 	
 	fseek (fin, 0, SEEK_SET);
 	while (fgets(line, ins_length, fin))
 	{
+
+		if (labels_is_label(line))
+			continue;
+
+		remove_newline_character(line,ins_length);
 		strncpy(instruction, line, ins_length);
+
 		opcode = strtok (instruction, s);
 		leftop = strtok (NULL, s);
 		rightop = strtok (NULL, s);
+
 		flag_isJumpOrCallIns = 0;
+		sep="";
 
 		if (!strcasecmp (opcode, "JMP") || !strcasecmp(opcode, "CALL"))
 		{	
@@ -106,7 +126,7 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 		else if (!strcasecmp(opcode, "JNZ") || !strcasecmp(opcode, "JZ"))
 		{
 			flag_isJumpOrCallIns = 1;
-			strcat (leftop, ", "); 
+			sep=", ";
 		}
 
 		if (flag_isJumpOrCallIns == 1 && labels_is_charstring(rightop))
@@ -115,11 +135,10 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 			
 			if (address < 0)
 			{
-				fprintf (stderr, "Can not resolve label %s.\n", rightop);
+				fprintf (stderr, "Can not resolve label \"%s\".\n", rightop);
 				return FALSE;
 			}
-			
-			fprintf (fout, "%s %s%d\n", opcode,leftop, address + base_address);
+			fprintf (fout, "%s %s%s%d\n", opcode, leftop, sep, address + base_address);
 		}
 		else
 		{
@@ -190,6 +209,8 @@ labels_resolve (const char *filename, char *outfile, int base_address)
 	
 	labels_phase_one (fin);
 	
+	labels_print();
+
 	labels_phase_two (fin, ftemp, base_address);	
 	
 	fclose (fin);
@@ -201,4 +222,27 @@ labels_random_name (char *name)
 {
 	srand (time(NULL));
 	sprintf (name, "tempfile.%d.xsm", rand());	
+}
+
+int
+remove_newline_character (char *str,int length)
+{
+	char *p = str;
+	int i=0;
+
+	if(!str)
+		return FALSE;
+
+	while (*p&&i<length)
+	{
+		if (*p=='\n'||*p=='\0')
+		{
+			*p='\0';
+			return TRUE;
+		}
+		i++;
+		p++;
+	}
+	
+	return FALSE;
 }
