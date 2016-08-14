@@ -457,7 +457,11 @@ void runCommand(char command[])
 	else if (strcmp(name,"rm")==0) 	//removes files to XFS disk.
 	{
 		arg1 = strtok(NULL, " ");
-		deleteFileFromDisk(arg1);
+		char *fileName = arg1;
+		if(fileName!=NULL)
+			deleteFileFromDisk(arg1);
+		else
+			printf("Missing <xfs_filename> for rm. See \"help\" for more information\n");
 	}	
 	
 	else if (strcmp(name,"export")==0) 	//removes files to XFS disk.

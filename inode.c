@@ -108,11 +108,15 @@ int removeInodeEntry(int locationOfInode){
 /*
 	This function checks if a file having name as the first arguement is present on the disk file.
 	This is done as follows:
-	1. It checks the entry in the fat block. If a file with same name exists then the function returns the relative word
-	address of the entry having the same name.
+	1. It checks the entry in the fat block. 
+		a.If a file with same name exists then the function returns the relative word
+		address of the entry having the same name.
+		b. returns -1 if the file name doesnt exist
 */
 int getInodeEntry(char *name){
 	int i,j;
+	if(name==NULL)
+		return -1;
 	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++)
 	{
 		for(i = INODE_ENTRY_FILENAME ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
@@ -121,7 +125,7 @@ int getInodeEntry(char *name){
 				return (((j - INODE) * BLOCK_SIZE) + i - INODE_ENTRY_FILENAME);
 		}
 	}
-	return (((j - INODE)* BLOCK_SIZE) + i - INODE_ENTRY_FILENAME);
+	return -1;
 }
 
 

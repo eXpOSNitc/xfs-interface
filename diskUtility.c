@@ -57,7 +57,7 @@ int deleteFileFromDisk(char *name)
 	for(i = 0; i < max_num_blocks; i++)
 		blockAddresses[i]=0;
 	locationOfInode = getInodeEntry(name);
-	if(locationOfInode >= INODE_SIZE){
+	if(locationOfInode < 0){
 		printf("File \'%s\' not found!\n",name);
 		return -1;
 	}
@@ -315,7 +315,7 @@ int loadExecutableToDisk(char *name)
 			}
 	}
 	i = getInodeEntry(filename);
-	if( i < INODE_SIZE ){
+	if( i >= 0 ){
 		printf("Disk already contains the file with this name. Try again with a different name.\n");
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		return -1;
@@ -411,7 +411,7 @@ int loadDataToDisk(char *name)
 	}
 
 	i = getInodeEntry(filename);
-	if( i < INODE_SIZE )
+	if( i >= 0 )
 	{
 		printf("Disk already contains the file with this name. Try again with a different name.\n");
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
@@ -608,7 +608,7 @@ void displayFileContents(char *name)
 		blk[i] = 0;
 	
 	locationOfInode = getInodeEntry(name);
-	if(locationOfInode >= INODE_SIZE){
+	if(locationOfInode < 0){
 		printf("File \'%s\' not found!\n",name);
 		return;
 	}
@@ -764,7 +764,7 @@ void exportFile(char *filename, char *unixfile)
 		blk[i] = 0;
 	
 	locationOfInode = getInodeEntry(filename);
-	if(locationOfInode >= INODE_SIZE){
+	if(locationOfInode < 0){
 		printf("File \'%s\' not found!\n",filename);
 		return;
 	}
