@@ -391,7 +391,7 @@ int loadDataToDisk(char *name)
 	num_of_chars = ftell(fileToBeLoaded);
 	num_of_words = getDataFileSize(fileToBeLoaded);
 	num_of_blocks_reqd = (num_of_words / 512) + ((num_of_words%512==0)?0:1);
-	printf("\n Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d\n",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
+	//printf("\n Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d\n",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
 	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
 	{
 		printf("The size of file exceeds %d blocks\n",INODE_MAX_BLOCK_NUM);
