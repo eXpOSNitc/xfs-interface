@@ -32,6 +32,7 @@ labels_phase_one(FILE *fp)
 	fseek (fp, 0, SEEK_SET);
 	while (fgets(instruction, ins_length, fp))
 	{
+		remove_newline_character(instruction,ins_length);
 		if (labels_is_label(instruction))
 		{
 			label = labels_get_name (instruction);
@@ -48,8 +49,8 @@ labels_phase_one(FILE *fp)
 
 int
 labels_is_label (const char *str)
-{	
-	if (strchr(str, ':'))
+{
+	if (str[strlen(str)-1]==':')
 		return TRUE;
 	return FALSE;
 }
@@ -90,11 +91,11 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 	fseek (fin, 0, SEEK_SET);
 	while (fgets(line, ins_length, fin))
 	{
+		remove_newline_character(line,ins_length);
 
 		if (labels_is_label(line))
 			continue;
 
-		remove_newline_character(line,ins_length);
 		strncpy(instruction, line, ins_length);
 
 		opcode = strtok (instruction, s);
