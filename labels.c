@@ -93,7 +93,7 @@ labels_phase_two (FILE *fin, FILE *fout, int base_address)
 	{
 		remove_newline_character(line,ins_length);
 
-		if (labels_is_label(line))
+		if (labels_is_label(line)||strlen(line)<=0)
 			continue;
 
 		strncpy(instruction, line, ins_length);
