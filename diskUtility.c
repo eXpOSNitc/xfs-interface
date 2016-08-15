@@ -137,7 +137,7 @@ int deleteExHandlerFromDisk()
 	NOTE: 1. EOF is set only after reading beyond the end of the file. This is the reason why the if condition is needed is needed.
 	2. Also the function must read till EOF or BLOCK_SIZE line so that successive read proceeds accordingly
 */
-int writeFileToDisk(FILE *f, int blockNum, int type)
+int writeFileToDisk(FILE *fp, int blockNum, int type)
 {
 	int i, line=0,j;
 	char buffer[32],s[16],temp[100],c;
@@ -148,7 +148,7 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 		int line_count=0,flag=0,k=0;
 		for(i = 0; i < (BLOCK_SIZE/2); i++)
 		{
-			fgets(temp,100,f);
+			fgets(temp,100,fp);
 			
 			string_start=strchr(temp,'"');
 			if(string_start==NULL)
@@ -177,7 +177,7 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 			}
 		
 			
-			if(strlen(buffer)>3)
+			if(strlen(buffer)>1)
 			{
 				if(buffer[strlen(buffer)-1]=='\n')
 					buffer[strlen(buffer)-1]='\0';
@@ -224,7 +224,7 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 			
 			}
 			
-			 if(feof(f)){
+			 if(feof(fp)){
 				strcpy(disk[TEMP_BLOCK].word[line_count], "");
 				writeToDisk(TEMP_BLOCK,blockNum);
 				return -1;
@@ -239,9 +239,9 @@ int writeFileToDisk(FILE *f, int blockNum, int type)
 		char buffer1[16],c;
 		for(i = 0; i < BLOCK_SIZE; i++)
 		{
-			fgets(buffer1,16,f);
+			fgets(buffer1,16,fp);
 			strcpy(disk[TEMP_BLOCK].word[i],buffer1);
-			if(feof(f))
+			if(feof(fp))
 			{
 				strcpy(disk[TEMP_BLOCK].word[i], "");
 				writeToDisk(TEMP_BLOCK,blockNum);
