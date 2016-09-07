@@ -719,7 +719,7 @@ void formatDisk(int format)
 				rootFileDataBlocks[i] = -1;
 		}
 
-		AddEntryToMemInode(0, FILETYPE_ROOT, "root", NO_OF_ROOTFILE_BLOCKS, rootFileDataBlocks);
+		AddEntryToMemInode(0, FILETYPE_ROOT, "root", NO_OF_ROOTFILE_BLOCKS * BLOCK_SIZE, rootFileDataBlocks);
 
 		commitMemCopyToDisk(INODE);
 		commitMemCopyToDisk(ROOTFILE);//Not necessary since currently it is configured to automatically commit ROOTFILE along with INODE 
