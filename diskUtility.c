@@ -777,20 +777,23 @@ void exportFile(char *filename, char *unixfile)
 	{
 		printf("File \'%s\' not found!\n", unixfile);
 	}
-
-	k = 0;
-	while (blk[k] > 0)
+	else
 	{
-		emptyBlock(TEMP_BLOCK);
-		readFromDisk(TEMP_BLOCK,blk[k]);
-		for(l=0;l<BLOCK_SIZE;l++)
+		k = 0;
+		while (blk[k] > 0)
 		{
-			if(strcmp(disk[TEMP_BLOCK].word[l],"\0")!=0)
-				fprintf(outFile,"%s",disk[TEMP_BLOCK].word[l]);
+			emptyBlock(TEMP_BLOCK);
+			readFromDisk(TEMP_BLOCK,blk[k]);
+			for(l=0;l<BLOCK_SIZE;l++)
+			{
+				if(strcmp(disk[TEMP_BLOCK].word[l],"\0")!=0)
+					fprintf(outFile,"%s",disk[TEMP_BLOCK].word[l]);
+			}
+			//printf("next block\n");
+			emptyBlock(TEMP_BLOCK);
+			k++;
 		}
-		//printf("next block\n");
-		emptyBlock(TEMP_BLOCK);
-		k++;
+		fclose(outFile);
 	}
 }
 
