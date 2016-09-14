@@ -352,7 +352,8 @@ void runCommand(char command[])
 
 		char *int_command = strtok(arg1, "=");	
 		char *intType = strtok(NULL, "=");
-		char *fileName = arg2;
+		char *fileName = (char*)malloc(51*sizeof(char));
+		strncpy(fileName,arg2,50);
 		
 		if(fileName!=NULL)
 			fileName[50] = '\0';
@@ -452,6 +453,7 @@ void runCommand(char command[])
 			}
 		else
 			printf("Invalid argument \"%s\" for load. See \"help\" for more information\n",arg1);
+		free(fileName);
 	}	
 	
 	else if (strcmp(name,"rm")==0) 	//removes files to XFS disk.
