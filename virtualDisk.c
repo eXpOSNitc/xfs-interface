@@ -86,7 +86,7 @@ void setDefaultValues(int dataStructure)
 					storeValue(disk[INODE + j].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
 
 				for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-					strcpy(disk[INODE + j].word[INODE_ENTRY_FILENAME + i],"");//Set "" to filename of all entries
+					storeValue(disk[INODE + j].word[INODE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
 			}
 			break;
 
@@ -100,7 +100,7 @@ void setDefaultValues(int dataStructure)
 					storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
 
 				for(i=0; i<BLOCK_SIZE; i+=ROOTFILE_ENTRY_SIZE)
-					strcpy(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILENAME + i],"");//Set 0 to filesize of all entries
+					storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
 			}
 			break;
 	}
