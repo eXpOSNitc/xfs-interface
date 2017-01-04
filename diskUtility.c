@@ -6,6 +6,8 @@
 #include "constants.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
 extern BLOCK* disk;
 
 void disk_init()
@@ -61,11 +63,15 @@ int deleteFileFromDisk(char *name)
 		printf("File \'%s\' not found!\n",name);
 		return -1;
 	}
+	
 	getDataBlocks(blockAddresses,locationOfInode);		
 	freeUnusedBlock(blockAddresses, max_num_blocks);
+	
 	removeInodeEntry(locationOfInode);
+	
 	commitMemCopyToDisk(INODE);
 	commitMemCopyToDisk(DISK_FREE_LIST);
+	
 	return 0;	
 }
 
@@ -306,7 +312,7 @@ int loadExecutableToDisk(char *name)
 	
 	fseek(fileToBeLoaded,0,SEEK_SET);
 	
-	for(i = 0; i < num_of_blocks_reqd + 1; i++)
+	for(i = 0; i < num_of_blocks_reqd; i++)
 	{
 		if((freeBlock[i] = FindFreeBlock()) == -1){
 				printf("Insufficient disk space!\n");
@@ -321,16 +327,15 @@ int loadExecutableToDisk(char *name)
 		return -1;
 	}
 	
-	k = FindEmptyInodeEntry();		
+	k = FindEmptyInodeEntry();	
+		
 	if( k == -1 ){
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		printf("No free INODE entry found.\n");
 		return -1;			
 	}
 	
-	
-	for(i = DISK_FREE_LIST ;i < DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)		//updating disk free list in disk
-		writeToDisk(i, i);
+	commitMemCopyToDisk(DISK_FREE_LIST);
 	emptyBlock(TEMP_BLOCK);				//note:need to modify this
 	
 	for(i=0;i<num_of_blocks_reqd;i++)
@@ -339,12 +344,9 @@ int loadExecutableToDisk(char *name)
 		file_size++;
 	}
 	
-
-
 	AddEntryToMemInode(k, FILETYPE_EXEC,filename, file_size * BLOCK_SIZE, freeBlock);	
-	for(i = INODE; i < INODE + NO_OF_INODE_BLOCKS ; i++){
-		writeToDisk(i,i);				
-	}
+	
+	commitMemCopyToDisk(INODE);
 	
 	close(fileToBeLoaded);
 	return 0;
@@ -418,7 +420,8 @@ int loadDataToDisk(char *name)
 		return -1;
 	}
 	
-	k = FindEmptyInodeEntry();		
+	k = FindEmptyInodeEntry();
+			
 	if( k == -1 )
 	{
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
@@ -436,7 +439,6 @@ int loadDataToDisk(char *name)
 		j = writeFileToDisk(fileToBeLoaded, freeBlock[i], DATA_FILE);
 		file_size++;
 	}
-	
 	
 	AddEntryToMemInode(k, FILETYPE_DATA, filename, file_size * BLOCK_SIZE, freeBlock);		
 	commitMemCopyToDisk(INODE);
@@ -722,7 +724,8 @@ void formatDisk(int format)
 		AddEntryToMemInode(0, FILETYPE_ROOT, "root", NO_OF_ROOTFILE_BLOCKS * BLOCK_SIZE, rootFileDataBlocks);
 
 		commitMemCopyToDisk(INODE);
-		commitMemCopyToDisk(ROOTFILE);//Not necessary since currently it is configured to automatically commit ROOTFILE along with INODE 
+		commitMemCopyToDisk(ROOTFILE);
+		//Not necessary since currently it is configured to automatically commit ROOTFILE along with INODE 
 	}
 	else
 	{

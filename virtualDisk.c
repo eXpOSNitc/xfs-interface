@@ -5,10 +5,10 @@
 
 extern BLOCK* disk;
 
-
 void _disk_init()
 {
-	disk=(BLOCK*)malloc((NO_BLOCKS_TO_COPY + EXTRA_BLOCKS)*sizeof(BLOCK));			// disk contains the memory copy of the necessary blocks of the actual disk file.
+	disk=(BLOCK*)malloc((NO_BLOCKS_TO_COPY + EXTRA_BLOCKS)*sizeof(BLOCK));			
+	// disk contains the memory copy of the necessary blocks of the actual disk file.
 }
 
 /*
@@ -152,7 +152,7 @@ XOSFILE* _getAllFiles(){
 	{
 		for(i = 0 ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
 		{
-			if( getValue(disk[j].word[INODE_ENTRY_DATABLOCK + i]) > 0 )	// Negative value indicates invalid INODE
+			if( getValue(disk[j].word[INODE_ENTRY_FILENAME + i]) != -1 )	// -1 indicates invalid INODE
 			{ 	
 				hasFiles = 1;
 				XOSFILE *new_entry;
@@ -182,6 +182,8 @@ int loadFileToVirtualDisk()
 		readFromDisk(i,i);
 	for(i=INODE; i<INODE + NO_OF_INODE_BLOCKS; i++)
 		readFromDisk(i,i);
+	for(i=ROOTFILE; i<ROOTFILE + NO_OF_ROOTFILE_BLOCKS; i++)
+		readFromDisk(i,i);	
 }
 
 /*

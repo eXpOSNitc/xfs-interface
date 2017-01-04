@@ -2,6 +2,8 @@
 #include <libgen.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
+
 /* For command completion. */
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -9,6 +11,7 @@
 #include "fileSystem.h"
 #include "exception.h"
 #include "diskUtility.h"
+
 
 jmp_buf exp_point;//for exception handling
 
@@ -541,16 +544,15 @@ void runCommand(char command[])
 
 int main(int argc, char **argv){
 	int intNo, fd;
-	char fileName[51], option;
-	FILE* diskFp;
-	
+
 	disk_init();
+
 	fd = open(DISK_NAME, O_RDONLY, 0666);
 	if(fd > 0)
 	{
+		close(fd);
 		loadFileToVirtualDisk();
 	}
-	close(fd);
 
 	cli(argc, argv);					//Loads the Command Line Interface
 	return 0;

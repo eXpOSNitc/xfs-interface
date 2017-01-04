@@ -14,7 +14,7 @@ extern BLOCK* disk;
 int FindEmptyInodeEntry(){
 	int i,j,entryFound = 0,entryNumber = 0;
 	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++){
-		for(i = INODE_ENTRY_DATABLOCK; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE){
+		for(i = INODE_ENTRY_FILENAME; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE){
 			if( getValue(disk[j].word[i]) == -1 ){
 				entryNumber = (((j - INODE) * BLOCK_SIZE) + i);
 				entryFound = 1;
@@ -28,7 +28,7 @@ int FindEmptyInodeEntry(){
 		printf("INODE is full.\n");
 		return -1;
 	}
-	return (entryNumber-INODE_ENTRY_DATABLOCK);
+	return (entryNumber-INODE_ENTRY_FILENAME);
 }
 
 
@@ -56,6 +56,7 @@ void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, i
 	storeValueAt( baseAddress + INODE_ENTRY_FILESIZE , size_of_file );
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValueAt( baseAddress + INODE_ENTRY_DATABLOCK + i , addrOfDataBlocks[i] );
+	
 	AddEntryToMemRootFile(startIndexInInode/INODE_ENTRY_SIZE*ROOTFILE_ENTRY_SIZE, fileType, nameOfFile, size_of_file);
 }
 
@@ -70,13 +71,15 @@ void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, i
 	The memory copy is not committed.
 */
 int removeRootFileEntry(int locationOfRootFile){
+
 	int i;
-	int blockNumber = INODE + locationOfRootFile / BLOCK_SIZE;
+	int blockNumber = ROOTFILE + locationOfRootFile / BLOCK_SIZE;
 	int startWordNumber = locationOfRootFile % BLOCK_SIZE;
 
 	storeValue(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILETYPE], -1);
-	strcpy(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILENAME], "");
+	storeValue(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILENAME], -1);
 	storeValue(disk[blockNumber].word[startWordNumber + ROOTFILE_ENTRY_FILESIZE], 0);
+	
 	return 0;
 }
 
@@ -97,11 +100,13 @@ int removeInodeEntry(int locationOfInode){
 	int startWordNumber = locationOfInode % BLOCK_SIZE;
 
 	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILETYPE], -1);
-	strcpy(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILENAME], "");
+	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILENAME], -1);
 	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILESIZE], 0);
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_DATABLOCK + i], -1);
+	
 	removeRootFileEntry(locationOfInode / INODE_ENTRY_SIZE * ROOTFILE_ENTRY_SIZE);
+	
 	return 0;
 }
 

@@ -8,3 +8,5 @@ disk.xfs
 *.tmp
 temp*
 test
+inodetable.txt
+rootfile.txt
