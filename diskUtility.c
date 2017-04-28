@@ -8,6 +8,34 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <ctype.h>
+
+void trim(char *str)
+{
+    char *start, *end;
+
+    /* Find first non-whitespace */
+    for (start = str; *start; start++)
+    {
+        if (!isspace((unsigned char)start[0]))
+            break;
+    }
+
+    /* Find start of last all-whitespace */
+    for (end = start + strlen(start); end > start + 1; end--)
+    {
+        if (!isspace((unsigned char)end[-1]))
+            break;
+    }
+
+    *end = 0; /* Truncate last whitespace */
+
+    /* Shift from "start" to the beginning of the string */
+    if (start > str)
+        memmove(str, start, (end - start) + 1);
+}
+
+
 extern BLOCK* disk;
 
 void disk_init()
@@ -143,20 +171,37 @@ int deleteExHandlerFromDisk()
 	NOTE: 1. EOF is set only after reading beyond the end of the file. This is the reason why the if condition is needed is needed.
 	2. Also the function must read till EOF or BLOCK_SIZE line so that successive read proceeds accordingly
 */
+
+/*
+	This file copies the necessary contents of a file to the corresponding location specified by the second arguemnt on the disk.
+	The file is first copied to the memory copy of the disk. This is then committed to the actual disk file.
+	NOTE: 1. EOF is set only after reading beyond the end of the file. This is the reason why the if condition is needed is needed.
+	2. Also the function must read till EOF or BLOCK_SIZE line so that successive read proceeds accordingly
+*/
 int writeFileToDisk(FILE *fp, int blockNum, int type)
 {
+	
 	int i, line=0,j;
 	char buffer[32],s[16],temp[100],c;
 	emptyBlock(TEMP_BLOCK);
+	
 	if(type==ASSEMBLY_CODE)			//writing files with assembly code
 	{
 		char *instr, *arg1, *arg2, *string_start;
 		int line_count=0,flag=0,k=0;
-		for(i = 0; i < (BLOCK_SIZE/2); i++)
+		while( line_count < BLOCK_SIZE )
 		{
+			
 			fgets(temp,100,fp);
 			
+			if(feof(fp)){
+				strcpy(disk[TEMP_BLOCK].word[line_count], temp);
+				writeToDisk(TEMP_BLOCK,blockNum);
+				return -1;
+			 }
+			
 			string_start=strchr(temp,'"');
+			
 			if(string_start==NULL)
 			{
 				for(k=0;k<31;k++)
@@ -185,29 +230,63 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 			
 			if(strlen(buffer)>1)
 			{
+				char Instr[20];
+				char Arg1[20];
+				char Arg2[20];
+				
+				
 				if(buffer[strlen(buffer)-1]=='\n')
 					buffer[strlen(buffer)-1]='\0';
+	
 				instr=strtok(buffer," ");
-				arg1=strtok(NULL," ");
-				arg2=strtok(NULL,",");
-			
+				arg1=strtok(NULL,",");
+				arg2=strtok(NULL,"\0");
+				
+				if(instr != NULL){
+					strcpy(Instr,instr);
+					trim(Instr);
+				}
+				if(arg1 != NULL){
+					strcpy(Arg1,arg1);
+					trim(Arg1);
+				}
+				if(arg2 != NULL){
+					strcpy(Arg2,arg2);
+					trim(Arg2);
+				}
+				
+				// printf("%s|%s|%s\n",Instr,Arg1,arg2);
+				
+				if(arg1 != NULL && arg2 != NULL)
+					arg1 = strcat(Arg1,",");
+					
 				bzero(s,16);
-				if(arg1!=NULL)
+				
+
+				//Check for number as Instruction -> header
+				if(instr != NULL)
+				if(isdigit(Instr[0])){
+					sprintf(s,"%s",Instr);
+					strcpy(disk[TEMP_BLOCK].word[line_count],s);
+					line_count = line_count + 1;
+				}
+						
+				else if(arg1!=NULL)
 				{
-					sprintf(s,"%s %s",instr,arg1);
+					sprintf(s,"%s %s",Instr,Arg1);
 					for(j=strlen(s);j<16;j++)
 						s[j]='\0';
 					strcpy(disk[TEMP_BLOCK].word[line_count],s);
 					if(arg2!=NULL)
 					{
-						strcpy(s,arg2);
-						for(j=strlen(s);j<16;j++)
-							s[j]='\0';
+						
+						sprintf(s,"%s",Arg2);
 						strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
 				
 					}
 					else
 					{
+						
 						for(j=0;j<16;j++)
 							s[j]='\0';
 						strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
@@ -229,12 +308,6 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 				}
 			
 			}
-			
-			 if(feof(fp)){
-				strcpy(disk[TEMP_BLOCK].word[line_count], "");
-				writeToDisk(TEMP_BLOCK,blockNum);
-				return -1;
-			 }
 			
 		}
 		writeToDisk(TEMP_BLOCK,blockNum);
