@@ -544,7 +544,7 @@ int loadShellCode(char* infile )
 */
 int loadLibraryCode(char* infile )
 {
-	return loadCodeWithLabels(infile, LIBRARY_BLOCK, NO_OF_LIBRARY_BLOCKS, MEM_LIBRARY_PAGE);
+	return loadCode(infile, LIBRARY_BLOCK, NO_OF_LIBRARY_BLOCKS);
 }
 
 /*
