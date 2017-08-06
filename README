@@ -16,7 +16,7 @@ Compiling and Running :
 ---------------------
 Run the following commands to compile and run the interface
 	1. make
-	2. ./fileSystem
+	2. ./xfs-interface
 
 Commands :
 --------
