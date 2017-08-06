@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 
 /* For command completion. */
 #include <readline/readline.h>
