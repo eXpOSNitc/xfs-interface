@@ -54,6 +54,8 @@ void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, i
 	storeValueAt( baseAddress + INODE_ENTRY_FILETYPE, fileType );
 	storeStringValueAt( baseAddress + INODE_ENTRY_FILENAME, nameOfFile);
 	storeValueAt( baseAddress + INODE_ENTRY_FILESIZE , size_of_file );
+	storeValueAt( baseAddress + INODE_ENTRY_USERID, 1);
+	storeValueAt( baseAddress + INODE_ENTRY_PERMISSION, 1);
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValueAt( baseAddress + INODE_ENTRY_DATABLOCK + i , addrOfDataBlocks[i] );
 	
@@ -102,6 +104,8 @@ int removeInodeEntry(int locationOfInode){
 	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILETYPE], -1);
 	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILENAME], -1);
 	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_FILESIZE], 0);
+	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_USERID], -1);
+	storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_PERMISSION], -1);
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValue(disk[blockNumber].word[startWordNumber + INODE_ENTRY_DATABLOCK + i], -1);
 	

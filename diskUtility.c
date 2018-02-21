@@ -417,7 +417,7 @@ int loadExecutableToDisk(char *name)
 		file_size++;
 	}
 	
-	AddEntryToMemInode(k, FILETYPE_EXEC,filename, file_size * BLOCK_SIZE, freeBlock);	
+	AddEntryToMemInode(k, FILETYPE_EXEC,filename, num_of_lines*2, freeBlock);	
 	
 	commitMemCopyToDisk(INODE);
 	
@@ -513,7 +513,7 @@ int loadDataToDisk(char *name)
 		file_size++;
 	}
 	
-	AddEntryToMemInode(k, FILETYPE_DATA, filename, file_size * BLOCK_SIZE, freeBlock);		
+	AddEntryToMemInode(k, FILETYPE_DATA, filename, num_of_words, freeBlock);		
 	commitMemCopyToDisk(INODE);
 	
 	close(fileToBeLoaded);

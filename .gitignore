@@ -1,4 +1,5 @@
 xfs-interface
+run.sh
 disk.xfs
 *.dat
 *~
