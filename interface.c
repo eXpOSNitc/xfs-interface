@@ -356,11 +356,11 @@ void runCommand(char command[])
 
 		char *int_command = strtok(arg1, "=");	
 		char *intType = strtok(NULL, "=");
-		char *fileName = (char*)malloc(51*sizeof(char));
-		strncpy(fileName,arg2,50);
+		char *fileName = (char*)malloc(101*sizeof(char));
+		strncpy(fileName,arg2,100);
 		
 		if(fileName!=NULL)
-			fileName[50] = '\0';
+			fileName[100] = '\0';
 		else
 		{
 			printf("Missing <pathname> for load. See \"help\" for more information\n");
