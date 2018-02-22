@@ -80,6 +80,12 @@ XOSFILE* getAllFiles()
 */
 int deleteFileFromDisk(char *name)
 {
+	if(strcmp(name, "root") == 0)
+	{
+		printf("Root file cannot be deleted\n");
+		return -1;
+	}
+
 	diskCheckFileExists();
 
 	int max_num_blocks = INODE_MAX_BLOCK_NUM;
