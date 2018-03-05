@@ -54,8 +54,21 @@ void AddEntryToMemInode(int startIndexInInode, int fileType, char *nameOfFile, i
 	storeValueAt( baseAddress + INODE_ENTRY_FILETYPE, fileType );
 	storeStringValueAt( baseAddress + INODE_ENTRY_FILENAME, nameOfFile);
 	storeValueAt( baseAddress + INODE_ENTRY_FILESIZE , size_of_file );
-	storeValueAt( baseAddress + INODE_ENTRY_USERID, 1);
-	storeValueAt( baseAddress + INODE_ENTRY_PERMISSION, 1);
+    if(fileType == FILETYPE_ROOT)
+    {
+	    storeValueAt( baseAddress + INODE_ENTRY_USERID, 0);
+	    storeValueAt( baseAddress + INODE_ENTRY_PERMISSION, 0);
+    }
+    else if(fileType == FILETYPE_DATA)
+    {
+	    storeValueAt( baseAddress + INODE_ENTRY_USERID, 1);
+	    storeValueAt( baseAddress + INODE_ENTRY_PERMISSION, 1);
+    }
+    else if(fileType == FILETYPE_EXEC)
+    {
+	    storeValueAt( baseAddress + INODE_ENTRY_USERID, 0);
+	    storeValueAt( baseAddress + INODE_ENTRY_PERMISSION, -1);
+    }
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		storeValueAt( baseAddress + INODE_ENTRY_DATABLOCK + i , addrOfDataBlocks[i] );
 	
