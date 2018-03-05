@@ -43,8 +43,7 @@ void disk_init()
 	_disk_init();
 }
 
-void
-listAllFiles ()
+void listAllFiles ()
 {
 	XOSFILE *list, *next;
 
@@ -789,7 +788,7 @@ void formatDisk(int format)
 		setDefaultValues(DISK_FREE_LIST);
 		commitMemCopyToDisk(DISK_FREE_LIST);
 		
-		setDefaultValues(INODE);
+		setDefaultValues(INODE);        //sets default value for both inode table and root file.
 		setDefaultValues(ROOTFILE);
 
 		for(i = 0; i < INODE_NUM_DATA_BLOCKS; i++)//Add root file blocks address to an array
@@ -801,6 +800,12 @@ void formatDisk(int format)
 		}
 
 		AddEntryToMemInode(0, FILETYPE_ROOT, "root", NO_OF_ROOTFILE_BLOCKS * BLOCK_SIZE, rootFileDataBlocks);
+
+        int userTableBase = INODE*BLOCK_SIZE + 960;
+        storeStringValueAt(userTableBase, "root");
+        storeStringValueAt(userTableBase+1, "root");
+        storeStringValueAt(userTableBase+2, "kernel");
+        storeStringValueAt(userTableBase+3, "-1");
 
 		commitMemCopyToDisk(INODE);
 		commitMemCopyToDisk(ROOTFILE);

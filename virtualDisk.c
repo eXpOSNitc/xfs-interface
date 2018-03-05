@@ -77,18 +77,33 @@ void setDefaultValues(int dataStructure)
 			break;
 
 		case INODE:
-			for(j=0; j<NO_OF_INODE_BLOCKS; j++)
-			{
-				for(i=0; i<BLOCK_SIZE; i++)
-					storeValue(disk[INODE + j].word[i], -1);//Enters -1 to all INODE ENTRIES
+            // NavaK: Inode table occupies only the first 960 words (60 entries each of size 16 words). The next 32 are
+            // taken by the user table.
 
-				for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-					storeValue(disk[INODE + j].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+            // write default values to first inode block
+			for(i=0; i<BLOCK_SIZE; i++)
+				storeValue(disk[INODE].word[i], -1);//Enters -1 to all INODE ENTRIES
 
-				for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-					storeValue(disk[INODE + j].word[INODE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
-			}
-			break;
+			for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
+				storeValue(disk[INODE].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+
+			for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
+				storeValue(disk[INODE].word[INODE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
+	
+            // write default values to remaining 28 entries in the next block
+			for(i=0; i<960 - BLOCK_SIZE; i++)
+				storeValue(disk[INODE + 1].word[i], -1);//Enters -1 to all INODE ENTRIES
+
+			for(i=0; i<960 - BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
+				storeValue(disk[INODE + 1].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+
+			for(i=0; i<960 - BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
+				storeValue(disk[INODE + 1].word[INODE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
+			
+            // write default values to the next 32 words (16 entries each of size 2 words) which is the USER TABLE
+			for(i=960 - BLOCK_SIZE; i<BLOCK_SIZE; i++)
+				storeValue(disk[INODE + 1].word[i], -1);//Enters -1 to all USER TABLE entries
+            break;
 
 		case ROOTFILE:
 			for(j=0; j<NO_OF_ROOTFILE_BLOCKS; j++)
@@ -154,6 +169,10 @@ XOSFILE* _getAllFiles(){
 		{
 			if( getValue(disk[j].word[INODE_ENTRY_FILENAME + i]) != -1 )	// -1 indicates invalid INODE
 			{ 	
+                //NavaK: Inode table ends after 960 - BLOCK_SIZE words of the second block. No need to look after that
+                if(j == INODE + NO_OF_INODE_BLOCKS - 1 && i >= 960 - BLOCK_SIZE)
+                    continue;
+
 				hasFiles = 1;
 				XOSFILE *new_entry;
 

@@ -319,8 +319,8 @@ void runCommand(char command[])
 		printf(" df \n\t Display free list and free space\n");
 		printf(" cat <xfs_filename> \n\t to display contents of a file\n");
 		printf(" copy <start_blocks> <end_block> <unix_filename>\n\t Copies contents of specified range of blocks to a UNIX file.\n");
-		printf(" dump --inodetable \n\t Copies the contents of inode table to an external UNIX file named inodetable.txt\n");
-		printf(" dump --rootfile \n\t Copies the contents of root file to an external UNIX file named inodetable.txt\n");
+		printf(" dump --inodeandroot\n\t Copies the contents of inode table and the user table to an external UNIX file named inodeandroot.txt\n");
+		printf(" dump --rootfile \n\t Copies the contents of root file to an external UNIX file named rootfile.txt\n");
 		printf(" exit \n\t Exit the interface\n");
 	}
 	
@@ -523,9 +523,9 @@ void runCommand(char command[])
 	else if (strcmp(name,"dump")==0) 	//loads files to XFS disk.
 	{
 		arg1 = strtok(NULL, " ");
-		if (strcmp(arg1,"--inodetable")==0)
+		if (strcmp(arg1,"--inodeandroot")==0)
 		{
-			dumpInodeTable("inodetable.txt");
+			dumpInodeTable("inodeandroot.txt");
 		}
 		else if(strcmp(arg1,"--rootfile")==0)
 		{
