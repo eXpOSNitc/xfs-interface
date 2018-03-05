@@ -802,10 +802,10 @@ void formatDisk(int format)
 		AddEntryToMemInode(0, FILETYPE_ROOT, "root", NO_OF_ROOTFILE_BLOCKS * BLOCK_SIZE, rootFileDataBlocks);
 
         int userTableBase = INODE*BLOCK_SIZE + 960;
-        storeStringValueAt(userTableBase, "root");
-        storeStringValueAt(userTableBase+1, "root");
-        storeStringValueAt(userTableBase+2, "kernel");
-        storeStringValueAt(userTableBase+3, "-1");
+        storeStringValueAt(userTableBase, "kernel");
+        storeStringValueAt(userTableBase+1, "-1");
+        storeStringValueAt(userTableBase+2, "root");
+        storeStringValueAt(userTableBase+3, "root");
 
 		commitMemCopyToDisk(INODE);
 		commitMemCopyToDisk(ROOTFILE);
