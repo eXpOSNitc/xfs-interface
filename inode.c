@@ -143,6 +143,10 @@ int getInodeEntry(char *name){
 	{
 		for(i = INODE_ENTRY_FILENAME ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
 		{
+            //To not look in the user table region
+            if(j == INODE + NO_OF_INODE_BLOCKS - 1 && i >= 960 - BLOCK_SIZE)
+                continue;
+
 			if(strcmp(disk[j].word[i], name) == 0 && getValue(disk[j].word[i]) != -1)		
 				return (((j - INODE) * BLOCK_SIZE) + i - INODE_ENTRY_FILENAME);
 		}
