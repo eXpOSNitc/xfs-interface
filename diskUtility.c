@@ -805,7 +805,7 @@ void formatDisk(int format)
         storeStringValueAt(userTableBase, "kernel");
         storeStringValueAt(userTableBase+1, "-1");
         storeStringValueAt(userTableBase+2, "root");
-        storeStringValueAt(userTableBase+3, "root");
+        storeStringValueAt(userTableBase+3, "452");
 
 		commitMemCopyToDisk(INODE);
 		commitMemCopyToDisk(ROOTFILE);
