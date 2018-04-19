@@ -96,7 +96,7 @@ xfs_cli_completion(const char *text, int start, int end)
 
 	curr_context = malloc(start + 1);
 	strncpy (curr_context, rl_line_buffer, start);
-	
+
 	/* strncpy is touchy, we have to take care of our frontiers. */
 	curr_context[start] = '\0';
 
@@ -254,8 +254,8 @@ xfs_cli_file_gen (const char *text, int state)
 	return result;
 }
 
-/* 
-Function to invoke Command Line interface 
+/*
+Function to invoke Command Line interface
 */
 void cli(int argc, char **argv)
 {
@@ -267,11 +267,11 @@ void cli(int argc, char **argv)
 		i=2;
 		while(i<argc)
 		{
-		
+
 			sprintf(command,"%s %s", command, argv[i]);
 			i++;
-		}		
-		runCommand(command);	
+		}
+		runCommand(command);
 	}
 	else
 	{
@@ -281,25 +281,26 @@ void cli(int argc, char **argv)
 	}
 }
 
-/* 
-Function to process commands 
+/*
+Function to process commands
 */
 void runCommand(char command[])
 {
 	char *name = strtok(command, " ");
 	char *arg1, *arg2, *arg3;
-	
+
 	char * line = NULL;
 	int exp_occured;
 	exp_occured = setjmp(exp_point);
 	if(exp_occured){
-		exception_printErrorMessage(exp_occured);	
+		exception_printErrorMessage(exp_occured);
 		return;
 	}
-	
+
 	if(strcmp(name,"help")==0)		//"help" to display all commands
 	{
 		printf(" fdisk \n\t Format the disk with XFS filesystem\n");
+		printf(" run <pathname> \n\t Executes the set of xfs-interface commands sequentially \n");
 		printf(" load --exec <pathname> \n\t Loads an executable file to XFS disk \n");
 		printf(" load --data <pathname> \n\t Loads a data file to XFS disk \n");
 		printf(" load --init <pathname> \n\t Loads INIT code to XFS disk \n");
@@ -323,14 +324,14 @@ void runCommand(char command[])
 		printf(" dump --rootfile \n\t Copies the contents of root file to an external UNIX file named rootfile.txt\n");
 		printf(" exit \n\t Exit the interface\n");
 	}
-	
-	
+
+
 	else if (strcmp(name,"fdisk")==0)	//formatting the disk with XFS partition
 	{
 		printf("Formatting Complete. \"disk.xfs\" created.\n");
-		formatDisk(FORMAT);		
+		formatDisk(FORMAT);
 	}
-	
+
 	else if (strcmp(name, "run") == 0)	//batch process commands from file
 	{
 		arg1 = strtok(NULL, " ");
@@ -351,23 +352,27 @@ void runCommand(char command[])
 	else if (strcmp(name,"load")==0) 	//loads files to XFS disk.
 	{
 		arg1 = strtok(NULL, " ");
-		arg2 = strtok(NULL, " ");	
-		arg3 = strtok(NULL, " ");	
+		arg2 = strtok(NULL, " ");
+		arg3 = strtok(NULL, " ");
 
-		char *int_command = strtok(arg1, "=");	
+		char *int_command = strtok(arg1, "=");
 		char *intType = strtok(NULL, "=");
 		char *fileName = (char*)malloc(101*sizeof(char));
-		strncpy(fileName,arg2,100);
-		
+
+		if(!arg2)
+			fileName = NULL;
+		else
+			strncpy(fileName,arg2,100);
+
 		if(fileName!=NULL)
 			fileName[100] = '\0';
 		else
 		{
 			printf("Missing <pathname> for load. See \"help\" for more information\n");
 			return;
-		}		
-				
-		if (strcmp(arg1,"--exec")==0)	
+		}
+
+		if (strcmp(arg1,"--exec")==0)
 		{
 			char *c;
 			if (strlen(basename(fileName)) > 12)
@@ -375,26 +380,26 @@ void runCommand(char command[])
 				printf("Filename is more than 12 characters long\n");
 				return;
 			}
-			
+
 			c = strrchr(fileName,'.');
 			if (c == NULL || strcmp(c,".xsm") != 0)
 			{
 				printf("Filename does not have \".xsm\" extension\n");
 				return;
 			}
-			
+
 			loadExecutableToDisk(fileName);	 //loads executable file to disk.
-		}	
-			
-		else if (strcmp(arg1,"--init")==0)	
+		}
+
+		else if (strcmp(arg1,"--init")==0)
 			loadINITCode(fileName);			 //loads init code to disk
-		else if (strcmp(arg1,"--shell")==0)	
+		else if (strcmp(arg1,"--shell")==0)
 			loadShellCode(fileName);			 //loads init code to disk
-		else if (strcmp(arg1,"--library")==0)	
+		else if (strcmp(arg1,"--library")==0)
 			loadLibraryCode(fileName);			 //loads init code to disk
-		else if (strcmp(arg1,"--idle")==0)	
+		else if (strcmp(arg1,"--idle")==0)
 			loadIdleCode(fileName);			 //loads init code to disk
-		else if (strcmp(arg1,"--data")==0) 
+		else if (strcmp(arg1,"--data")==0)
 		{
 			char *c;
 			if (strlen(basename(fileName)) > 12)
@@ -402,14 +407,14 @@ void runCommand(char command[])
 				printf("Filename is more than 12 characters long\n");
 				return;
 			}
-			
+
 			c = strrchr(fileName,'.');
 			if (c == NULL || strcmp(c,".dat") != 0)
 			{
 				printf("Filename does not have \".dat\" extension\n");
 				return;
 			}
-			
+
 			loadDataToDisk(fileName);		 //loads data file to disk.
 		}
 		else if (strcmp(arg1,"--os")==0)
@@ -451,15 +456,15 @@ void runCommand(char command[])
 				return;
 			}
 		}
-		else if (strcmp(arg1,"--exhandler")==0) 
+		else if (strcmp(arg1,"--exhandler")==0)
  			{
 				loadExHandlerToDisk(fileName);		 //loads exception handler routine to disk.
 			}
 		else
 			printf("Invalid argument \"%s\" for load. See \"help\" for more information\n",arg1);
 		free(fileName);
-	}	
-	
+	}
+
 	else if (strcmp(name,"rm")==0) 	//removes files to XFS disk.
 	{
 		arg1 = strtok(NULL, " ");
@@ -468,21 +473,21 @@ void runCommand(char command[])
 			deleteFileFromDisk(arg1);
 		else
 			printf("Missing <xfs_filename> for rm. See \"help\" for more information\n");
-	}	
-	
+	}
+
 	else if (strcmp(name,"export")==0) 	//removes files to XFS disk.
 	{
 		arg1 = strtok(NULL, " ");
 		arg2 = strtok(NULL, " ");
 		exportFile(arg1,arg2);
-	}	
+	}
 
 	else if (strcmp(name,"ls")==0)		//Lists all files.
 		listAllFiles();
-		
+
 	else if (strcmp(name,"df")==0)		//Lists disk free list
 		displayDiskFreeList();
-				
+
 	else if (strcmp(name,"cat")==0)		//Displays contents of a file
 	{
 		arg1 = strtok(NULL, " ");
@@ -490,14 +495,14 @@ void runCommand(char command[])
 		if(fileName!=NULL)
 		{
 			//fileName[WORD_SIZE+1] = '\n';
-			
+
 			displayFileContents(fileName);
 		}
 		else
 		{
 			printf("Missing <xfs_filename> for cat. See \"help\" for more information\n");
 			return;
-		}	
+		}
 	}
 
 	else if (strcmp(name,"copy")==0)		//Copies blocks from Disk to UNIX file.
@@ -509,15 +514,15 @@ void runCommand(char command[])
 		{
 			printf("Insufficient arguments for \"copy\". See \"help\" for more information\n");
 			return;
-		}	
+		}
 		else
 		{
 			int startBlock = atoi(arg1);
-			int endBlock = atoi(arg2);	
-			char *fileName = arg3;			
+			int endBlock = atoi(arg2);
+			char *fileName = arg3;
 			fileName[50] = '\0';
 			copyBlocksToFile (startBlock,endBlock,fileName);
-		}	
+		}
 	}
 
 	else if (strcmp(name,"dump")==0) 	//loads files to XFS disk.
