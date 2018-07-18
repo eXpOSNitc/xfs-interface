@@ -96,16 +96,16 @@ int deleteFileFromDisk(char *name)
 		printf("File \'%s\' not found!\n",name);
 		return -1;
 	}
-	
-	getDataBlocks(blockAddresses,locationOfInode);		
+
+	getDataBlocks(blockAddresses,locationOfInode);
 	freeUnusedBlock(blockAddresses, max_num_blocks);
-	
+
 	removeInodeEntry(locationOfInode);
-	
+
 	commitMemCopyToDisk(INODE);
 	commitMemCopyToDisk(DISK_FREE_LIST);
-	
-	return 0;	
+
+	return 0;
 }
 
 /*
@@ -116,7 +116,7 @@ int clearDiskBlocks(int disk_start_block, int no_of_disk_blocks)
 	int i;
 	emptyBlock(TEMP_BLOCK);
 	for (i=0; i<no_of_disk_blocks; i++)
-		writeToDisk(TEMP_BLOCK, disk_start_block + i);	
+		writeToDisk(TEMP_BLOCK, disk_start_block + i);
 	return 0;
 }
 
@@ -185,28 +185,28 @@ int deleteExHandlerFromDisk()
 */
 int writeFileToDisk(FILE *fp, int blockNum, int type)
 {
-	
+
 	int i, line=0,j;
 	char buffer[32],s[16],temp[100],c;
 	emptyBlock(TEMP_BLOCK);
-	
+
 	if(type==ASSEMBLY_CODE)			//writing files with assembly code
 	{
 		char *instr, *arg1, *arg2, *string_start;
 		int line_count=0,flag=0,k=0;
 		while( line_count < BLOCK_SIZE )
 		{
-			
+
 			fgets(temp,100,fp);
-			
+
 			if(feof(fp)){
 				strcpy(disk[TEMP_BLOCK].word[line_count], temp);
 				writeToDisk(TEMP_BLOCK,blockNum);
 				return -1;
 			 }
-			
+
 			string_start=strchr(temp,'"');
-			
+
 			if(string_start==NULL)
 			{
 				for(k=0;k<31;k++)
@@ -231,22 +231,22 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 					buffer[k]='\0';
 				}
 			}
-		
-			
+
+
 			if(strlen(buffer)>1)
 			{
 				char Instr[20];
 				char Arg1[20];
 				char Arg2[20];
-				
-				
+
+
 				if(buffer[strlen(buffer)-1]=='\n')
 					buffer[strlen(buffer)-1]='\0';
-	
+
 				instr=strtok(buffer," ");
 				arg1=strtok(NULL,",");
 				arg2=strtok(NULL,"\0");
-				
+
 				if(instr != NULL){
 					strcpy(Instr,instr);
 					trim(Instr);
@@ -259,14 +259,14 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 					strcpy(Arg2,arg2);
 					trim(Arg2);
 				}
-				
+
 				// printf("%s|%s|%s\n",Instr,Arg1,arg2);
-				
+
 				if(arg1 != NULL && arg2 != NULL)
 					arg1 = strcat(Arg1,",");
-					
+
 				bzero(s,16);
-				
+
 
 				//Check for number as Instruction -> header
 				if(instr != NULL)
@@ -275,7 +275,7 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 					strcpy(disk[TEMP_BLOCK].word[line_count],s);
 					line_count = line_count + 1;
 				}
-						
+
 				else if(arg1!=NULL)
 				{
 					sprintf(s,"%s %s",Instr,Arg1);
@@ -284,14 +284,14 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 					strcpy(disk[TEMP_BLOCK].word[line_count],s);
 					if(arg2!=NULL)
 					{
-						
+
 						sprintf(s,"%s",Arg2);
 						strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
-				
+
 					}
 					else
 					{
-						
+
 						for(j=0;j<16;j++)
 							s[j]='\0';
 						strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
@@ -309,15 +309,15 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 						s[j]='\0';
 					strcpy(disk[TEMP_BLOCK].word[line_count+1],s);
 					line_count=line_count+2;
-			
+
 				}
-			
+
 			}
-			
+
 		}
 		writeToDisk(TEMP_BLOCK,blockNum);
 		return 1;
-	}	
+	}
 	else if(type==DATA_FILE)			//writing data files
 	{
 		char buffer1[16],c;
@@ -330,7 +330,7 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 				strcpy(disk[TEMP_BLOCK].word[i], "");
 				writeToDisk(TEMP_BLOCK,blockNum);
 				return -1;
-			}	
+			}
 		}
 		writeToDisk(TEMP_BLOCK,blockNum);
 		return 1;
@@ -356,10 +356,10 @@ int loadExecutableToDisk(char *name)
 	if(s!=NULL)
 		strcpy(filename,s+1);
 	else
-		strcpy(filename,name);	
-	
+		strcpy(filename,name);
+
 	filename[15]='\0';
-		
+
 	addext(filename,".xsm");
 
 	expandpath(name);
@@ -372,24 +372,24 @@ int loadExecutableToDisk(char *name)
 		printf("The file could not be opened");
 		return -1;
 	}
-	
+
 	while(c!=EOF)
 	{
 		c=fgetc(fileToBeLoaded);
 		if(c=='\n')
 			num_of_lines++;
 	}
-	
+
 	num_of_blocks_reqd = (num_of_lines / (BLOCK_SIZE/2)) + 1;
-	
+
 	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
 	{
 		printf("The size of file exceeds %d blocks",INODE_MAX_BLOCK_NUM);
 		return -1;
 	}
-	
+
 	fseek(fileToBeLoaded,0,SEEK_SET);
-	
+
 	for(i = 0; i < num_of_blocks_reqd; i++)
 	{
 		if((freeBlock[i] = FindFreeBlock()) == -1){
@@ -404,28 +404,28 @@ int loadExecutableToDisk(char *name)
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		return -1;
 	}
-	
-	k = FindEmptyInodeEntry();	
-		
+
+	k = FindEmptyInodeEntry();
+
 	if( k == -1 ){
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		printf("No free INODE entry found.\n");
-		return -1;			
+		return -1;
 	}
-	
+
 	commitMemCopyToDisk(DISK_FREE_LIST);
 	emptyBlock(TEMP_BLOCK);				//note:need to modify this
-	
+
 	for(i=0;i<num_of_blocks_reqd;i++)
 	{
 		j = writeFileToDisk(fileToBeLoaded, freeBlock[i], ASSEMBLY_CODE);
 		file_size++;
 	}
-	
-	AddEntryToMemInode(k, FILETYPE_EXEC,filename, num_of_lines*2, freeBlock);	
-	
+
+	AddEntryToMemInode(k, FILETYPE_EXEC,filename, num_of_lines*2, freeBlock);
+
 	commitMemCopyToDisk(INODE);
-	
+
 	close(fileToBeLoaded);
 	return 0;
 }
@@ -448,8 +448,8 @@ int loadDataToDisk(char *name)
 	if(s!=NULL)
 		strcpy(filename,s+1);
 	else
-		strcpy(filename,name);	
-	
+		strcpy(filename,name);
+
 	filename[15]='\0';
 	addext(filename,".dat");
 
@@ -465,9 +465,9 @@ int loadDataToDisk(char *name)
 		printf("The file could not be opened!");
 		return -1;
 	}
-	
+
 	fseek(fileToBeLoaded, 0L, SEEK_END);
-	
+
 	num_of_chars = ftell(fileToBeLoaded);
 	num_of_words = getDataFileSize(fileToBeLoaded);
 	num_of_blocks_reqd = (num_of_words / 512) + ((num_of_words%512==0)?0:1);
@@ -478,9 +478,9 @@ int loadDataToDisk(char *name)
 		printf("The file contains %d words, an xfs file can have only upto %d words\n", num_of_words, INODE_MAX_BLOCK_NUM * BLOCK_SIZE);
 		return -1;
 	}
-	
+
 	fseek(fileToBeLoaded,0,SEEK_SET);
-	
+
 	for(i = 0; i < num_of_blocks_reqd; i++)
 	{
 		if((freeBlock[i] = FindFreeBlock()) == -1){
@@ -497,30 +497,30 @@ int loadDataToDisk(char *name)
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		return -1;
 	}
-	
+
 	k = FindEmptyInodeEntry();
-			
+
 	if( k == -1 )
 	{
 		freeUnusedBlock(freeBlock, INODE_MAX_BLOCK_NUM);
 		printf("No free INODE entry found.\n");
-		return -1;			
+		return -1;
 	}
-	
+
 	commitMemCopyToDisk(DISK_FREE_LIST);
 
 	emptyBlock(TEMP_BLOCK);				//note:need to modify this
-	
-	
+
+
 	for(i=0;i<num_of_blocks_reqd;i++)//load the file
 	{
 		j = writeFileToDisk(fileToBeLoaded, freeBlock[i], DATA_FILE);
 		file_size++;
 	}
-	
-	AddEntryToMemInode(k, FILETYPE_DATA, filename, num_of_words, freeBlock);		
+
+	AddEntryToMemInode(k, FILETYPE_DATA, filename, num_of_words, freeBlock);
 	commitMemCopyToDisk(INODE);
-	
+
 	close(fileToBeLoaded);
 	return 0;
 }
@@ -546,11 +546,11 @@ int getDataFileSize(FILE *fp)
 int loadCodeWithLabels(char* infile, int disk_block, int no_of_disk_blocks, int mem_page)
 {
 	expandpath(infile);
-	
+
 	char fileName[66];
 	int ret;
 
-	labels_reset ();	
+	labels_reset ();
 	labels_resolve (infile, fileName, mem_page * PAGE_SIZE);
 
 	ret=loadCode(fileName, disk_block, no_of_disk_blocks);
@@ -577,7 +577,7 @@ int loadCode(char* fileName, int disk_start_block, int no_of_disk_blocks)
 		printf("File %s not found.\n", fileName);
 		return -1;
 	}
-	
+
 	for(i=0;i<no_of_disk_blocks;i++)
 	{
 		j = writeFileToDisk(fp, disk_start_block + i, ASSEMBLY_CODE);
@@ -683,16 +683,16 @@ void displayFileContents(char *name)
 	diskCheckFileExists();
 	int i,j,k,l,flag=0,locationOfInode;
 	int blk[INODE_NUM_DATA_BLOCKS];
-	
+
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		blk[i] = 0;
-	
+
 	locationOfInode = getInodeEntry(name);
 	if(locationOfInode < 0){
 		printf("File \'%s\' not found!\n",name);
 		return;
 	}
-		
+
 	getDataBlocks(blk,locationOfInode);
 
 	k = 0;
@@ -749,7 +749,7 @@ int copyBlocksToFile (int startblock,int endblock,char *filename)
 void displayDiskFreeList()
 {
 	diskCheckFileExists();
-	
+
 	int i,j,no_of_free_blocks=0;
 	for(j = 0; j < NO_OF_FREE_LIST_BLOCKS; j++)
 	{
@@ -772,7 +772,7 @@ void displayDiskFreeList()
 	1. A memory copy of the disk is maintained. This copy contains NO_BLOCKS_TO_COPY + EXTRA_BLOCKS (in this case 13 + 1) blocks.
 	The extra block is a temporary block. This memory copy is called the virtual disk. This is first cleared.
 	2. Then the memory freelist is initialised.
-	3. The fat blocks are also initialised. The basic block entries are all set to -1. The memory copy is then committed to the 
+	3. The fat blocks are also initialised. The basic block entries are all set to -1. The memory copy is then committed to the
 	disk file.
 	4. Finally the entry for init process is made.
 */
@@ -784,10 +784,10 @@ void formatDisk(int format)
 		createDiskFile(DISK_NO_FORMAT);
 		clearVirtDisk();
 		int i=0;
-		
+
 		setDefaultValues(DISK_FREE_LIST);
 		commitMemCopyToDisk(DISK_FREE_LIST);
-		
+
 		setDefaultValues(INODE);        //sets default value for both inode table and root file.
 		setDefaultValues(ROOTFILE);
 
@@ -809,13 +809,13 @@ void formatDisk(int format)
 
 		commitMemCopyToDisk(INODE);
 		commitMemCopyToDisk(ROOTFILE);
-		//Not necessary since currently it is configured to automatically commit ROOTFILE along with INODE 
+		//Not necessary since currently it is configured to automatically commit ROOTFILE along with INODE
 	}
 	else
 	{
 		createDiskFile(DISK_NO_FORMAT);
 	}
-	
+
 }
 
 
@@ -849,13 +849,13 @@ void exportFile(char *filename, char *unixfile)
 
 	for(i=0;i<INODE_NUM_DATA_BLOCKS;i++)
 		blk[i] = 0;
-	
+
 	locationOfInode = getInodeEntry(filename);
 	if(locationOfInode < 0){
 		printf("File \'%s\' not found!\n",filename);
 		return;
 	}
-		
+
 	getDataBlocks(blk,locationOfInode);
 
 	expandpath(unixfile);
@@ -874,7 +874,7 @@ void exportFile(char *filename, char *unixfile)
 			for(l=0;l<BLOCK_SIZE;l++)
 			{
 				if(strcmp(disk[TEMP_BLOCK].word[l],"\0")!=0)
-					fprintf(outFile,"%s",disk[TEMP_BLOCK].word[l]);
+					fprintf(outFile,"%s\n",disk[TEMP_BLOCK].word[l]);
 			}
 			//printf("next block\n");
 			emptyBlock(TEMP_BLOCK);
@@ -885,7 +885,7 @@ void exportFile(char *filename, char *unixfile)
 }
 
 // To expand environment variables in path
-void expandpath(char *path) 		
+void expandpath(char *path)
 {
 	char *rem_path = strdup(path);
 	char *token = strsep(&rem_path, "/");

@@ -479,7 +479,14 @@ void runCommand(char command[])
 	{
 		arg1 = strtok(NULL, " ");
 		arg2 = strtok(NULL, " ");
-		exportFile(arg1,arg2);
+		if(arg2!=NULL){
+			exportFile(arg1,arg2);
+		}
+		else
+		{
+			printf("Missing <pathname> for export. See \"help\" for more information\n");
+			return;
+		}
 	}
 
 	else if (strcmp(name,"ls")==0)		//Lists all files.
