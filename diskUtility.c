@@ -873,8 +873,7 @@ void exportFile(char *filename, char *unixfile)
 			readFromDisk(TEMP_BLOCK,blk[k]);
 			for(l=0;l<BLOCK_SIZE;l++)
 			{
-				if(strcmp(disk[TEMP_BLOCK].word[l],"\0")!=0)
-					fprintf(outFile,"%s\n",disk[TEMP_BLOCK].word[l]);
+			  fprintf(outFile,"%s\n",disk[TEMP_BLOCK].word[l]);
 			}
 			//printf("next block\n");
 			emptyBlock(TEMP_BLOCK);

@@ -30,4 +30,4 @@ xfs-interface: *.c *.h
 #	$(CC) $(CFLAGS) -c labels.c
 
 clean:
-	$(RM) xfs-interface *.o 
+	$(RM) xfs-interface *.o disk.xfs
