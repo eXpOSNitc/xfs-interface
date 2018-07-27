@@ -351,7 +351,7 @@ int loadExecutableToDisk(char *name)
 	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
 		freeBlock[i]=-1;
 	char c='\0',*s;
-	char filename[50];
+	char filename[INPUT_FILESIZE];
 	s = strrchr(name,'/');
 	if(s!=NULL)
 		strcpy(filename,s+1);
@@ -570,6 +570,8 @@ int loadCodeWithLabels(char* infile, int disk_block, int no_of_disk_blocks, int 
 */
 int loadCode(char* fileName, int disk_start_block, int no_of_disk_blocks)
 {
+  expandpath(fileName);
+
 	FILE* fp = fopen(fileName, "r");
 	int i,j;
 	if(fp == NULL)

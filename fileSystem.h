@@ -105,7 +105,7 @@
 
 /*
 Declarations for INODE Entry
-*/ 
+*/
 
 #define INODE_MAX_FILE_NUM 60
 #define INODE_MAX_BLOCK_NUM 4
@@ -141,9 +141,11 @@ Declarations for INODE Entry
 Other declarations
 */
 
-#define NO_BLOCKS_TO_COPY 69		//Rest of the blocks have data. 
+#define NO_BLOCKS_TO_COPY 69		//Rest of the blocks have data.
 #define EXTRA_BLOCKS	1			// Need a temporary block
 #define TEMP_BLOCK 69				//Temporary block no: starting from 0.
+
+#define INPUT_FILESIZE 200
 
 typedef struct _XOSFILE
 {

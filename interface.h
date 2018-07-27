@@ -6,7 +6,7 @@
 /*
   This function invokes a command line interface for interacting with XFS.
 */
-void cli();	
+void cli();
 
 /*
  This function processes each command the user enters
@@ -33,5 +33,11 @@ xfs_cli_file_gen (const char *text, int state);
 
 char*
 xfs_cli_int_gen (const char *text, int state);
+
+char*
+xfs_cli_module_gen(const char *text, int state);
+
+char*
+xfs_cli_dump_gen(const char *text, int state); 
 
 #endif

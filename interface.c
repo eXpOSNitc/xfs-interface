@@ -8,11 +8,11 @@
 /* For command completion. */
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <ctype.h>
 #include "interface.h"
 #include "fileSystem.h"
 #include "exception.h"
 #include "diskUtility.h"
-
 
 jmp_buf exp_point;//for exception handling
 
@@ -110,26 +110,40 @@ xfs_cli_completion(const char *text, int start, int end)
 		matches = rl_completion_matches (text, xfs_cli_command_gen);
 	else if (!strcmp(pch, "load"))
 	{
-		if (rl_line_buffer[start - 1] == '=')
-			matches = rl_completion_matches(text, xfs_cli_int_gen);
-		else if (!strtok(NULL, " "))
-			matches = rl_completion_matches(text, xfs_cli_opt_gen);
-	}
-	else if (!strcmp(pch, "rm"))
-	{
-		pch = strtok(NULL, " ");
-
-		if (!pch)
-			matches = rl_completion_matches(text, xfs_cli_opt_gen);
-		else if (rl_line_buffer[start - 1] == '=')
+		if (start>=6 &&
+					rl_line_buffer[start - 6] == '-' &&
+					rl_line_buffer[start - 5] == '-' &&
+					rl_line_buffer[start - 4] == 'i' &&
+					rl_line_buffer[start - 3] == 'n' &&
+					rl_line_buffer[start - 2] == 't' &&
+		 			rl_line_buffer[start - 1] == '=')
 			matches = rl_completion_matches(text, xfs_cli_int_gen);
 		else
-			matches = rl_completion_matches(text, xfs_cli_file_gen);
+		{
+			pch = strtok(NULL, " ");
+			if(pch!=NULL && !strcmp(pch, "--module"))
+			{
+				matches = rl_completion_matches(text, xfs_cli_module_gen);
+			}
+			else
+			 matches = rl_completion_matches(text, xfs_cli_opt_gen);
+		}
 	}
-	else if (!strcmp(pch, "cat"))
+	else if(!strcmp(pch, "export"))
 	{
 		matches = rl_completion_matches(text, xfs_cli_file_gen);
 	}
+	else if(!strcmp(pch, "dump"))
+	{
+		matches = rl_completion_matches(text, xfs_cli_dump_gen);
+	}
+	else if (!strcmp(pch, "cat") || !strcmp(pch, "rm"))
+	{
+		matches = rl_completion_matches(text, xfs_cli_file_gen);
+	}
+
+	if(matches == NULL)
+		rl_completion_append_character = '\0';
 
 	free(curr_context);
 	return matches;
@@ -138,9 +152,9 @@ xfs_cli_completion(const char *text, int start, int end)
 char*
 xfs_cli_command_gen (const char *text, int state)
 {
-	const char *commands[8]={"fdisk", "load", "rm", "ls", "cat", "copy", "exit", "help"};
+	const char *commands[12]={"fdisk", "run", "load", "export", "rm", "ls", "df", "cat", "copy", "dump", "exit", "help"};
 	static int index, len;
-	const int comm_len = 8;
+	const int comm_len = 12;
 
 	if (state == 0)
 	{
@@ -158,9 +172,9 @@ xfs_cli_command_gen (const char *text, int state)
 char*
 xfs_cli_opt_gen(const char *text, int state)
 {
-	const char *options[12] = {"--exec", "--int=", "--exhandler", "--os", "--data"};
+	const char *options[10] = {"--int=", "--exec", "--data", "--init", "--os", "--idle", "--shell", "--library", "--exhandler", "--module"};
 	static int index, len;
-	const int opt_len = 5;
+	const int opt_len = 10;
 
 	if (state == 0)
 	{
@@ -173,7 +187,7 @@ xfs_cli_opt_gen(const char *text, int state)
 		if (!strncmp(text, options[index], len))
 		{
 			/* A bit of hacking, prevent readline from appending a space after possible --int=. */
-			if (index == 1)
+			if (index == 0)
 				rl_completion_append_character = '\0';
 			return strdup(options[index++]);
 		}
@@ -185,9 +199,9 @@ xfs_cli_opt_gen(const char *text, int state)
 char*
 xfs_cli_int_gen (const char *text, int state)
 {
-	const char *ints[8]={"1", "2", "3", "4", "5", "6", "7", "timer"};
+	const char *ints[18]={"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "timer", "disk", "console"};
 	static int index, len;
-	const int ints_len = 8;
+	const int ints_len = 18;
 
 	if (state == 0)
 	{
@@ -198,6 +212,46 @@ xfs_cli_int_gen (const char *text, int state)
 	for (; index < ints_len; ++index)
 		if (!strncmp(text, ints[index], len))
 			return strdup(ints[index++]);
+
+	return NULL;
+}
+
+char*
+xfs_cli_module_gen(const char *text, int state)
+{
+	const char *options[8] = {"0", "1", "2", "3", "4", "5", "6", "7"};
+	static int index, len;
+	const int opt_len = 8;
+
+	if (state == 0)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	for (; index < opt_len; ++index)
+		if (!strncmp(text, options[index], len))
+			return strdup(options[index++]);
+
+	return NULL;
+}
+
+char*
+xfs_cli_dump_gen(const char *text, int state)
+{
+	const char *options[2] = {"--inodeusertable", "--rootfile"};
+	static int index, len;
+	const int opt_len = 2;
+
+	if (state == 0)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	for (; index < opt_len; ++index)
+		if (!strncmp(text, options[index], len))
+			return strdup(options[index++]);
 
 	return NULL;
 }
@@ -357,15 +411,15 @@ void runCommand(char command[])
 
 		char *int_command = strtok(arg1, "=");
 		char *intType = strtok(NULL, "=");
-		char *fileName = (char*)malloc(101*sizeof(char));
+		char *fileName = (char*)malloc(INPUT_FILESIZE*sizeof(char));
 
 		if(!arg2)
 			fileName = NULL;
 		else
-			strncpy(fileName,arg2,100);
+			strncpy(fileName,arg2,INPUT_FILESIZE);
 
 		if(fileName!=NULL)
-			fileName[100] = '\0';
+			fileName[INPUT_FILESIZE] = '\0';
 		else
 		{
 			printf("Missing <pathname> for load. See \"help\" for more information\n");
@@ -436,7 +490,7 @@ void runCommand(char command[])
 			else
 			{
 				int intNo = atoi(intType);
-				if(intNo >=1 && intNo <=NO_OF_INTERRUPTS)
+				if(intNo >=4 && intNo <=NO_OF_INTERRUPTS)
 					loadIntCode(fileName, intNo);
 				else
 				{
@@ -527,7 +581,7 @@ void runCommand(char command[])
 			int startBlock = atoi(arg1);
 			int endBlock = atoi(arg2);
 			char *fileName = arg3;
-			fileName[50] = '\0';
+			fileName[INPUT_FILESIZE] = '\0';
 			copyBlocksToFile (startBlock,endBlock,fileName);
 		}
 	}
