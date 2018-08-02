@@ -411,15 +411,15 @@ void runCommand(char command[])
 
 		char *int_command = strtok(arg1, "=");
 		char *intType = strtok(NULL, "=");
-		char *fileName = (char*)malloc(INPUT_FILESIZE*sizeof(char));
+		char *fileName = (char*)malloc(101*sizeof(char));
 
 		if(!arg2)
 			fileName = NULL;
 		else
-			strncpy(fileName,arg2,INPUT_FILESIZE);
+			strncpy(fileName,arg2,100);
 
 		if(fileName!=NULL)
-			fileName[INPUT_FILESIZE] = '\0';
+			fileName[100] = '\0';
 		else
 		{
 			printf("Missing <pathname> for load. See \"help\" for more information\n");
@@ -581,7 +581,7 @@ void runCommand(char command[])
 			int startBlock = atoi(arg1);
 			int endBlock = atoi(arg2);
 			char *fileName = arg3;
-			fileName[INPUT_FILESIZE] = '\0';
+			fileName[50] = '\0';
 			copyBlocksToFile (startBlock,endBlock,fileName);
 		}
 	}

@@ -351,7 +351,7 @@ int loadExecutableToDisk(char *name)
 	for(i=0;i<INODE_MAX_BLOCK_NUM;i++)
 		freeBlock[i]=-1;
 	char c='\0',*s;
-	char filename[INPUT_FILESIZE];
+	char filename[50];
 	s = strrchr(name,'/');
 	if(s!=NULL)
 		strcpy(filename,s+1);
