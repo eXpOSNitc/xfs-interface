@@ -545,6 +545,7 @@ int getDataFileSize(FILE *fp)
 
 int loadCodeWithLabels(char* infile, int disk_block, int no_of_disk_blocks, int mem_page)
 {
+  int n;
 	expandpath(infile);
 
 	char fileName[66];
