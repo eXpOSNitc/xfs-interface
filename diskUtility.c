@@ -269,7 +269,7 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 
 
 				//Check for number as Instruction -> header
-				if(instr != NULL)
+				if(instr != NULL){
 				if(isdigit(Instr[0])){
 					sprintf(s,"%s",Instr);
 					strcpy(disk[TEMP_BLOCK].word[line_count],s);
@@ -311,6 +311,7 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 					line_count=line_count+2;
 
 				}
+      }
 
 			}
 
@@ -335,7 +336,7 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 		writeToDisk(TEMP_BLOCK,blockNum);
 		return 1;
 	}
-
+  return 0;
 }
 
 
@@ -426,7 +427,7 @@ int loadExecutableToDisk(char *name)
 
 	commitMemCopyToDisk(INODE);
 
-	close(fileToBeLoaded);
+	fclose(fileToBeLoaded);
 	return 0;
 }
 
@@ -521,7 +522,7 @@ int loadDataToDisk(char *name)
 	AddEntryToMemInode(k, FILETYPE_DATA, filename, num_of_words, freeBlock);
 	commitMemCopyToDisk(INODE);
 
-	close(fileToBeLoaded);
+	fclose(fileToBeLoaded);
 	return 0;
 }
 
@@ -592,7 +593,7 @@ int loadCode(char* fileName, int disk_start_block, int no_of_disk_blocks)
 		printf("Code exceeds %d block\n",no_of_disk_blocks);
 		clearDiskBlocks(disk_start_block,no_of_disk_blocks);
 	}
-	close(fp);
+	fclose(fp);
 	return 0;
 }
 
