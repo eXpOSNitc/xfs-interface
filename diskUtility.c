@@ -200,7 +200,7 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
 			fgets(temp,100,fp);
 
 			if(feof(fp)){
-				strcpy(disk[TEMP_BLOCK].word[line_count], temp);
+				//strcpy(disk[TEMP_BLOCK].word[line_count], temp);
 				writeToDisk(TEMP_BLOCK,blockNum);
 				return -1;
 			 }
@@ -369,10 +369,6 @@ int loadExecutableToDisk(char *name)
 		printf("File %s not found.\n", name);
 		return -1;
 	}
-	if(fileToBeLoaded == NULL){
-		printf("The file could not be opened");
-		return -1;
-	}
 
 	while(c!=EOF)
 	{
@@ -461,18 +457,13 @@ int loadDataToDisk(char *name)
 		printf("File \'%s\' not found.!\n", name);
 		return -1;
 	}
-	if(fileToBeLoaded == NULL)
-	{
-		printf("The file could not be opened!");
-		return -1;
-	}
 
 	fseek(fileToBeLoaded, 0L, SEEK_END);
 
 	num_of_chars = ftell(fileToBeLoaded);
 	num_of_words = getDataFileSize(fileToBeLoaded);
 	num_of_blocks_reqd = (num_of_words / 512) + ((num_of_words%512==0)?0:1);
-	//printf("\n Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d\n",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
+	//printf("Chars = %d, Words = %d, Blocks(chars) = %d, Blocks(words) = %d\n",num_of_chars,num_of_words,num_of_blocks_reqd,(num_of_words/512));
 	if(num_of_blocks_reqd > INODE_MAX_BLOCK_NUM)
 	{
 		printf("The size of file exceeds %d blocks\n",INODE_MAX_BLOCK_NUM);
@@ -541,7 +532,7 @@ int getDataFileSize(FILE *fp)
 		if(feof(fp))
 			break;
 	}
-	return num_of_words;
+	return num_of_words - 1;
 }
 
 int loadCodeWithLabels(char* infile, int disk_block, int no_of_disk_blocks, int mem_page)

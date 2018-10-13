@@ -1,6 +1,6 @@
 #Our compiler.
 CC = gcc
-CFLAGS = -g 
+CFLAGS = -g
 LDFLAGS = -lreadline
 #Default rule.
 
@@ -23,11 +23,12 @@ xfs-interface: *.c *.h
 #inode.o: inode.c inode.h
 #	$(CC) $(CFLAGS) -c inode.c
 
-#interface.o: interface.c interface.h inode.h diskUtility.h fileSystem.h 
+#interface.o: interface.c interface.h inode.h diskUtility.h fileSystem.h
 #	$(CC) $(CFLAGS) -c interface.c
 
 #labels.o: labels.c labels.h
 #	$(CC) $(CFLAGS) -c labels.c
 
 clean:
-	$(RM) xfs-interface *.o disk.xfs
+	$(RM) xfs-interface *.o disk.xfs rootfile.txt inodeusertable.txt
+	$(RM) -rf xfs-interface.dSYM
