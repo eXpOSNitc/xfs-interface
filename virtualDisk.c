@@ -1,250 +1,234 @@
+/*
+Interface between disk and memory copy of disk file.
+*/
+
 #include "virtualDisk.h"
+
 #include <stdlib.h>
 #include <stdio.h>
-#include "disk.h"
+#include <string.h>
 
-extern BLOCK* disk;
+extern BLOCK *disk;
 
-void _disk_init()
+/* Initialise virtual disk */
+void virtual_disk_init()
 {
-	disk=(BLOCK*)malloc((NO_BLOCKS_TO_COPY + EXTRA_BLOCKS)*sizeof(BLOCK));			
-	// disk contains the memory copy of the necessary blocks of the actual disk file.
+    disk = (BLOCK *)malloc(XFS_NUM_BLOCKS * sizeof(BLOCK));
 }
 
-/*
- This function empties a block as specified by the first arguement in the memory copy of the disk file.
-*/
-void emptyBlock(int blockNo) 
+/* Empties a block in the memory copy of the disk file */
+void emptyBlock(int blockNo)
 {
-	int i;
-	for(i = 0 ; i < BLOCK_SIZE ; i++)
-	{
-		strcpy(disk[blockNo].word[i],"") ;
-	}
+    int i;
+
+    for (i = 0; i < BLOCK_SIZE; i++)
+        strcpy(disk[blockNo].word[i], "");
 }
 
+/* Frees the blocks specified by the block number */
+void freeUnusedBlock(int *freeBlock, int size)
+{
+    int i = 0;
 
-/*
-	This function frees the blocks specified by the block number present in the first arguement. The second arguement is the size
-	of the first argument.
-	The memory copy is not committed.
-*/
-void freeUnusedBlock(int *freeBlock, int size){
-	int i=0;
-	for( i = 0 ; i < size && freeBlock[i] != -1 && freeBlock[i] != 0; i++){
-		//printf("Block Num = %d\nLocation = %d", freeBlock[i],freeBlock[i] % BLOCK_SIZE );
-		storeValueAt(DISK_FREE_LIST * BLOCK_SIZE + freeBlock[i] , 0 );
-		emptyBlock(TEMP_BLOCK);
-		writeToDisk(TEMP_BLOCK,freeBlock[i]);//clear the contents of the block in disk
-	}
+    for (i = 0; i < size && freeBlock[i] != -1 && freeBlock[i] != 0; i++)
+    {
+        storeValueAt(DISK_FREE_LIST * BLOCK_SIZE + freeBlock[i], 0);
+        emptyBlock(TEMP_BLOCK);
+        writeToDisk(TEMP_BLOCK, freeBlock[i]);
+    }
 }
 
+/* Returns the address of a free block on the disk */
+int FindFreeBlock()
+{
+    int i, j;
 
-/*
-	This function returns the address of a free block on the disk.
-	The value returned will be the relative word address of the corresponding entry in the free list.
-*/
-int FindFreeBlock(){
-	int i,j;
-	for(i = DISK_FREE_LIST ; i < DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS ;i++){
-		for(j = 0 ; j < BLOCK_SIZE; j++){
-			if( getValue(disk[i].word[j]) == 0 ){
-				storeValue( disk[i].word[j] , 1 );	
-				return ((i-DISK_FREE_LIST)*BLOCK_SIZE + j);
-			}
-		}
-	}
-	return -1;	
+    for (i = DISK_FREE_LIST; i < DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)
+    {
+        for (j = 0; j < BLOCK_SIZE; j++)
+        {
+            if (getValue(disk[i].word[j]) == 0)
+            {
+                storeValue(disk[i].word[j], 1);
+                return ((i - DISK_FREE_LIST) * BLOCK_SIZE + j);
+            }
+        }
+    }
+
+    return XFS_FAILURE;
 }
 
-/*
-	Fills the mem copy of disk Data Structure with default values
-*/
+/* Fills the memory copy of disk data structures with default values */
 void setDefaultValues(int dataStructure)
 {
-	int i,j;
-	switch(dataStructure)
-	{
-		case DISK_FREE_LIST:
-			for(j=0; j<(NO_OF_FREE_LIST_BLOCKS*BLOCK_SIZE); j++)
-			{
-				i=j/BLOCK_SIZE;
-				if( (j>=DATA_START_BLOCK) && (j<NO_OF_DISK_BLOCKS ))
-					storeValue(disk[DISK_FREE_LIST+i].word[j], 0);//Fill data block entries with 0(Free block)
-				else
-					storeValue(disk[DISK_FREE_LIST+i].word[j], 1);
-			}
-			break;
+    int i, j;
 
-		case INODE:
-            // NavaK: Inode table occupies only the first 960 words (60 entries each of size 16 words). The next 32 are
-            // taken by the user table.
+    switch (dataStructure)
+    {
+    case DISK_FREE_LIST:
+        for (j = 0; j < (NO_OF_FREE_LIST_BLOCKS * BLOCK_SIZE); j++)
+        {
+            i = j / BLOCK_SIZE;
+            if ((j >= DATA_START_BLOCK) && (j < NO_OF_DISK_BLOCKS))
+                storeValue(disk[DISK_FREE_LIST + i].word[j], 0);
+            else
+                storeValue(disk[DISK_FREE_LIST + i].word[j], 1);
+        }
+        break;
 
-            // write default values to first inode block
-			for(i=0; i<BLOCK_SIZE; i++)
-				storeValue(disk[INODE].word[i], -1);//Enters -1 to all INODE ENTRIES
+    case INODE:
+        for (i = 0; i < BLOCK_SIZE; i++)
+            storeValue(disk[INODE].word[i], -1);
 
-			for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-				storeValue(disk[INODE].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+        for (i = 0; i < BLOCK_SIZE; i += INODE_ENTRY_SIZE)
+            storeValue(disk[INODE].word[INODE_ENTRY_FILESIZE + i], 0);
 
-			for(i=0; i<BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-				storeValue(disk[INODE].word[INODE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
-	
-            // write default values to remaining 28 entries in the next block
-			for(i=0; i<960 - BLOCK_SIZE; i++)
-				storeValue(disk[INODE + 1].word[i], -1);//Enters -1 to all INODE ENTRIES
+        for (i = 0; i < BLOCK_SIZE; i += INODE_ENTRY_SIZE)
+            storeValue(disk[INODE].word[INODE_ENTRY_FILENAME + i], -1);
 
-			for(i=0; i<960 - BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-				storeValue(disk[INODE + 1].word[INODE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+        for (i = 0; i < 960 - BLOCK_SIZE; i++)
+            storeValue(disk[INODE + 1].word[i], -1);
 
-			for(i=0; i<960 - BLOCK_SIZE; i+=INODE_ENTRY_SIZE)
-				storeValue(disk[INODE + 1].word[INODE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
-			
-            // write default values to the next 32 words (16 entries each of size 2 words) which is the USER TABLE
-			for(i=960 - BLOCK_SIZE; i<BLOCK_SIZE; i++)
-				storeValue(disk[INODE + 1].word[i], -1);//Enters -1 to all USER TABLE entries
-            break;
+        for (i = 0; i < 960 - BLOCK_SIZE; i += INODE_ENTRY_SIZE)
+            storeValue(disk[INODE + 1].word[INODE_ENTRY_FILESIZE + i], 0);
 
-		case ROOTFILE:
-			for(j=0; j<NO_OF_ROOTFILE_BLOCKS; j++)
-			{
-				for(i=0; i<BLOCK_SIZE; i++)
-					storeValue(disk[ROOTFILE + j].word[i], -1);//Enters -1 to all INODE ENTRIES
+        for (i = 0; i < 960 - BLOCK_SIZE; i += INODE_ENTRY_SIZE)
+            storeValue(disk[INODE + 1].word[INODE_ENTRY_FILENAME + i], -1);
 
-				for(i=0; i<BLOCK_SIZE; i+=ROOTFILE_ENTRY_SIZE)
-					storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILESIZE + i],0);//Set 0 to filesize of all entries
+        for (i = 960 - BLOCK_SIZE; i < BLOCK_SIZE; i++)
+            storeValue(disk[INODE + 1].word[i], -1);
+        break;
 
-				for(i=0; i<BLOCK_SIZE; i+=ROOTFILE_ENTRY_SIZE)
-					storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILENAME + i],-1);//Set -1 to filename of all entries
-			}
-			break;
-	}
+    case ROOTFILE:
+        for (j = 0; j < NO_OF_ROOTFILE_BLOCKS; j++)
+        {
+            for (i = 0; i < BLOCK_SIZE; i++)
+                storeValue(disk[ROOTFILE + j].word[i], -1);
+
+            for (i = 0; i < BLOCK_SIZE; i += ROOTFILE_ENTRY_SIZE)
+                storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILESIZE + i], 0);
+
+            for (i = 0; i < BLOCK_SIZE; i += ROOTFILE_ENTRY_SIZE)
+                storeValue(disk[ROOTFILE + j].word[ROOTFILE_ENTRY_FILENAME + i], -1);
+        }
+        break;
+    }
 }
 
-/*
-	Commits the Memory copy of the disk dataStructure specified to the disk file
-*/
+/* Commits the memory copy of the disk data structures specified to the disk */
 void commitMemCopyToDisk(int dataStructure)
 {
-	int i;
-	switch(dataStructure)
-	{
-		case DISK_FREE_LIST:
-			for(i=0; i < NO_OF_FREE_LIST_BLOCKS; i++)
-				writeToDisk(DISK_FREE_LIST + i, DISK_FREE_LIST + i);
-			break;
+    int i;
 
-		case INODE://in case of inode, root file is also committed along with it
-			for(i=0; i<NO_OF_INODE_BLOCKS; i++)
-				writeToDisk(INODE + i, INODE + i);
-		case ROOTFILE:
-			for(i=0; i<NO_OF_ROOTFILE_BLOCKS; i++)
-				writeToDisk(ROOTFILE + i, ROOTFILE + i);
-			break;
-	}
+    switch (dataStructure)
+    {
+    case DISK_FREE_LIST:
+        for (i = 0; i < NO_OF_FREE_LIST_BLOCKS; i++)
+            writeToDisk(DISK_FREE_LIST + i, DISK_FREE_LIST + i);
+        break;
+
+    case INODE: //Also commit Root File
+        for (i = 0; i < NO_OF_INODE_BLOCKS; i++)
+            writeToDisk(INODE + i, INODE + i);
+
+    case ROOTFILE:
+        for (i = 0; i < NO_OF_ROOTFILE_BLOCKS; i++)
+            writeToDisk(ROOTFILE + i, ROOTFILE + i);
+        break;
+    }
 }
 
+/* Returns all the XFS files */
+XOSFILE *_getAllFiles()
+{
+    diskCheckFileExists();
 
-/*
-	This function lists all the files present on the disk.
-	This is done as follows:
-	1. The basic block entry in the memory copy of the disk is searched. If the value is not -1 then the filename is 
-	shown as output.
-*/
-XOSFILE* _getAllFiles(){
-	diskCheckFileExists();
-	
-	int i,j;
-	XOSFILE *sentinel, *curr_ptr;
-	int hasFiles = 0; 	// Flag which indicates if disk has no files
+    int i, j;
+    XOSFILE *sentinel, *curr_ptr;
+    int hasFiles = 0; // Flag which indicates if disk has no files
 
-	/* The sentinel works as a sentinel. */
-	sentinel = malloc(sizeof(XOSFILE));
-	sentinel->next = NULL;
-	curr_ptr = sentinel;
+    // The sentinel works as a sentinel
+    sentinel = malloc(sizeof(XOSFILE));
+    sentinel->next = NULL;
+    curr_ptr = sentinel;
 
-	for(j = INODE ; j < INODE + NO_OF_INODE_BLOCKS ; j++)
-	{
-		for(i = 0 ; i < BLOCK_SIZE ; i = i + INODE_ENTRY_SIZE)
-		{
-			if( getValue(disk[j].word[INODE_ENTRY_FILENAME + i]) != -1 )	// -1 indicates invalid INODE
-			{ 	
-                //NavaK: Inode table ends after 960 - BLOCK_SIZE words of the second block. No need to look after that
-                if(j == INODE + NO_OF_INODE_BLOCKS - 1 && i >= 960 - BLOCK_SIZE)
+    for (j = INODE; j < INODE + NO_OF_INODE_BLOCKS; j++)
+    {
+        for (i = 0; i < BLOCK_SIZE; i = i + INODE_ENTRY_SIZE)
+        {
+            if (getValue(disk[j].word[INODE_ENTRY_FILENAME + i]) != -1)
+            {
+                if (j == INODE + NO_OF_INODE_BLOCKS - 1 && i >= 960 - BLOCK_SIZE)
                     continue;
 
-				hasFiles = 1;
-				XOSFILE *new_entry;
+                hasFiles = 1;
+                XOSFILE *new_entry;
 
-				new_entry = malloc (sizeof(XOSFILE));
-				new_entry->name = strdup(disk[j].word[i + INODE_ENTRY_FILENAME]);
-				new_entry->size = getValue(disk[j].word[i + INODE_ENTRY_FILESIZE]);
-				curr_ptr->next = new_entry;
-				curr_ptr = new_entry;
-				curr_ptr->next = NULL;
-			}		
-		}
-	}
-	
-	curr_ptr = sentinel->next;
-	free(sentinel);
-	return curr_ptr;
+                new_entry = malloc(sizeof(XOSFILE));
+                new_entry->name = strdup(disk[j].word[i + INODE_ENTRY_FILENAME]);
+                new_entry->size = getValue(disk[j].word[i + INODE_ENTRY_FILESIZE]);
+
+                curr_ptr->next = new_entry;
+                curr_ptr = new_entry;
+                curr_ptr->next = NULL;
+            }
+        }
+    }
+
+    curr_ptr = sentinel->next;
+    free(sentinel);
+    return curr_ptr;
 }
 
-/*
-	This function initialises the memory copy of the disk with the contents from the actual disk file.
-*/
+/* Initialises the memory copy of the disk with the contents from the actual disk */
 int loadFileToVirtualDisk()
 {
-	int i;
-	for(i=DISK_FREE_LIST; i<DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)
-		readFromDisk(i,i);
-	for(i=INODE; i<INODE + NO_OF_INODE_BLOCKS; i++)
-		readFromDisk(i,i);
-	for(i=ROOTFILE; i<ROOTFILE + NO_OF_ROOTFILE_BLOCKS; i++)
-		readFromDisk(i,i);	
+    int i;
+
+    for (i = DISK_FREE_LIST; i < DISK_FREE_LIST + NO_OF_FREE_LIST_BLOCKS; i++)
+        readFromDisk(i, i);
+
+    for (i = INODE; i < INODE + NO_OF_INODE_BLOCKS; i++)
+        readFromDisk(i, i);
+
+    for (i = ROOTFILE; i < ROOTFILE + NO_OF_ROOTFILE_BLOCKS; i++)
+        readFromDisk(i, i);
+
+    return XFS_SUCCESS;
 }
 
-/*
-	This function wipes out the entire contents of the memory copy of the disk.
-*/
+/* Wipes out the entire contents of the memory copy of the disk */
 void clearVirtDisk()
 {
-	bzero(disk, sizeof(disk));
+    bzero(disk, sizeof(BLOCK));
 }
 
-/*
-	char* to int conversion
-	get integer value at address
-*/
+/* Retrieves a word from memory copy of the disk */
 int getValueAt(int address)
 {
-	getValue( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)]);
+    return getValue(disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)]);
 }
 
-/*
-	char* to int conversion
- */
-
-int getValue(char* str ) 
+/* char* to int conversion */
+int getValue(char *str)
 {
-	return atoi(str);
+    return atoi(str);
 }
 
-/*
-	int to char* conversion
-*/
-void storeValueAt(int address, int num) 
+/* Retrieves a word from memory copy of the disk */
+void storeValueAt(int address, int num)
 {
-	storeValue( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)] , num );
+    storeValue(disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)], num);
 }
 
-void storeValue(char *str, int num) 
+/* char* to int conversion */
+void storeValue(char *str, int num)
 {
-	sprintf(str,"%d",num);
+    sprintf(str, "%d", num);
 }
 
-void storeStringValueAt(int address, char *value) 
+/* Stores value at address */
+void storeStringValueAt(int address, char *value)
 {
-	strcpy( disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)] , value );
+    strcpy(disk[(address / BLOCK_SIZE)].word[(address % BLOCK_SIZE)], value);
 }

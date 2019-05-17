@@ -1,234 +1,235 @@
+/*
+Functions for handling labels in XFS files.
+*/
+
 #include "labels.h"
 
-static
-label *_root;
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+
+static label *_root;
 
 const int ins_length = XSM_INSTRUCTION_SIZE * XSM_WORD_SIZE + 1;
 
-void
-labels_reset ()
+/* Resets the labels */
+void labels_reset()
 {
-	label *ptr = _root, *next;
+    label *ptr = _root, *next;
 
-	while (ptr != NULL)
-	{
-		next = ptr->next;
+    while (ptr != NULL)
+    {
+        next = ptr->next;
+        free(ptr->name);
+        free(ptr);
 
-		free(ptr->name);
-		free(ptr);
-		ptr = next;
-	}
+        ptr = next;
+    }
 
-	_root = NULL;
+    _root = NULL;
 }
 
-int
-labels_phase_one(FILE *fp)
+/* Checks if the given instruction is a label */
+int labels_is_label(const char *str)
 {
-	char instruction[ins_length];
-	char *label;
-	int address = 0;
-
-	fseek (fp, 0, SEEK_SET);
-	while (fgets(instruction, ins_length, fp))
-	{
-		remove_newline_character(instruction,ins_length);
-		if (labels_is_label(instruction))
-		{
-			label = labels_get_name (instruction);
-			labels_insert (label, address);
-		}
-		else
-		{
-			address = address + XSM_INSTRUCTION_SIZE;
-		}
-	}
-
-	return TRUE;
+    if (str[strlen(str) - 1] == ':')
+        return TRUE;
+    return FALSE;
 }
 
-int
-labels_is_label (const char *str)
+/* Checks if the label is a string */
+int labels_is_charstring(char *str)
 {
-	if (str[strlen(str)-1]==':')
-		return TRUE;
-	return FALSE;
+    char *p = str;
+
+    if (!str)
+        return FALSE;
+
+    while (*p)
+    {
+        if (isalpha(*p))
+            return TRUE;
+        p++;
+    }
+
+    return FALSE;
 }
 
-char*
-labels_get_name (char *label)
+/* Retrieves the label name */
+char *labels_get_name(char *label)
 {
-	const char *delim = ":";
-
-	return strdup(strtok(label, delim));
+    const char *delim = ":";
+    return strdup(strtok(label, delim));
 }
 
-void
-labels_insert (char *label_name, int address)
+/* Retrieves the target address */
+int labels_get_target(const char *name)
 {
-	label *ptr;
+    label *ptr = _root;
 
-	ptr = (label *) malloc (sizeof(label));
+    while (ptr)
+    {
+        if (!strcmp(ptr->name, name))
+            return ptr->address;
+        ptr = ptr->next;
+    }
 
-	ptr->name = label_name;
-	ptr->address = address;
-
-	ptr->next = _root;
-	_root = ptr;
-
-	return;
+    return XFS_FAILURE;
 }
 
-int
-labels_phase_two (FILE *fin, FILE *fout, int base_address)
+/* Inserts a new label */
+void labels_insert(char *label_name, int address)
 {
-	char line[100],instruction[100];
-	char instr[XSM_WORD_SIZE];
-	int address = 0,flag_isJumpOrCallIns;
-	const char *s = " ,";
-	char *opcode, *leftop, *rightop, *sep;
+    label *ptr = (label *)malloc(sizeof(label));
 
-	fseek (fin, 0, SEEK_SET);
-	while (fgets(line, 100, fin))
-	{
-		remove_newline_character(line,100);
-
-		if (labels_is_label(line)||strlen(line)<=0)
-			continue;
-
-		strncpy(instruction, line, 100);
-
-		opcode = strtok (instruction, s);
-		leftop = strtok (NULL, s);
-		rightop = strtok (NULL, s);
-
-		flag_isJumpOrCallIns = 0;
-		sep="";
-
-		if (!strcasecmp (opcode, "JMP") || !strcasecmp(opcode, "CALL"))
-		{
-			flag_isJumpOrCallIns = 1;
-			rightop = leftop;
-			leftop = "";
-		}
-		else if (!strcasecmp(opcode, "JNZ") || !strcasecmp(opcode, "JZ"))
-		{
-			flag_isJumpOrCallIns = 1;
-			sep=", ";
-		}
-
-		if (flag_isJumpOrCallIns == 1 && labels_is_charstring(rightop))
-		{
-			address = labels_get_target (rightop);
-
-			if (address < 0)
-			{
-				fprintf (stderr, "Can not resolve label \"%s\".\n", rightop);
-				return FALSE;
-			}
-			fprintf (fout, "%s %s%s%d\n", opcode, leftop, sep, address + base_address);
-		}
-		else
-		{
-			fprintf (fout, "%s\n", line);
-		}
-	}
-
-	return TRUE;
+    ptr->name = label_name;
+    ptr->address = address;
+    ptr->next = _root;
+    _root = ptr;
 }
 
-int
-labels_get_target (const char *name)
+/* Resolve labels */
+int labels_resolve(const char *filename, char *outfile, int base_address)
 {
-	label *ptr;
+    int n;
+    FILE *fin, *ftemp;
 
-	ptr = _root;
+    fin = fopen(filename, "r");
+    if (!fin)
+    {
+        fprintf(stderr, "Can't open source file.\n");
+        return FALSE;
+    }
 
-	while (ptr)
-	{
-		if (!strcmp (ptr->name, name))
-			return ptr->address;
-		ptr = ptr->next;
-	}
+    labels_random_name(outfile);
+    ftemp = fopen(outfile, "w");
+    if (!ftemp)
+    {
+        fprintf(stderr, "Can't create temporary file.\n");
+        return FALSE;
+    }
 
-	return -1;
+    labels_phase_one(fin);
+    labels_phase_two(fin, ftemp, base_address);
+
+    fclose(fin);
+    fclose(ftemp);
+
+    return TRUE;
 }
 
-int
-labels_is_charstring (char *str)
+/* Phase one of label resolving */
+int labels_phase_one(FILE *fp)
 {
-	char *p = str;
+    int address;
+    char instruction[ins_length];
+    char *label;
 
-	if(!str)
-		return FALSE;
+    address = 0;
+    fseek(fp, 0, SEEK_SET);
 
-	while (*p)
-	{
-		if (isalpha(*p))
-			return TRUE;
+    while (fgets(instruction, ins_length, fp))
+    {
+        remove_newline_character(instruction, ins_length);
+        if (labels_is_label(instruction))
+        {
+            label = labels_get_name(instruction);
+            labels_insert(label, address);
+        }
+        else
+            address += XSM_INSTRUCTION_SIZE;
+    }
 
-		p++;
-	}
-
-	return FALSE;
+    return TRUE;
 }
 
-int
-labels_resolve (const char *filename, char *outfile, int base_address)
+/* Phase two of label resolving */
+int labels_phase_two(FILE *fin, FILE *fout, int base_address)
 {
-	int n;
-	FILE *fin, *ftemp;
+    int address, flag_isJumpOrCallIns;
+    char line[100], instruction[100], instr[XSM_WORD_SIZE];
+    char *opcode, *leftop, *rightop, *sep;
+    const char *s = " ,";
 
-	fin = fopen (filename, "r");
+    address = 0;
+    fseek(fin, 0, SEEK_SET);
 
-	if (!fin)
-	{
-		fprintf (stderr, "Can't open source file.\n");
-		return FALSE;
-	}
+    while (fgets(line, 100, fin))
+    {
+        remove_newline_character(line, 100);
+        if (labels_is_label(line) || strlen(line) <= 0)
+            continue;
 
-	labels_random_name(outfile);
-	ftemp = fopen (outfile, "w");
+        strncpy(instruction, line, 100);
 
-	if (!ftemp)
-	{
-		fprintf (stderr, "Can't create temporary file.\n");
-		return FALSE;
-	}
+        opcode = strtok(instruction, s);
+        leftop = strtok(NULL, s);
+        rightop = strtok(NULL, s);
 
-	labels_phase_one (fin);
-	labels_phase_two (fin, ftemp, base_address);
+        flag_isJumpOrCallIns = 0;
+        sep = "";
 
-	fclose (fin);
-	fclose (ftemp);
+        if (!strcasecmp(opcode, "JMP") || !strcasecmp(opcode, "CALL"))
+        {
+            flag_isJumpOrCallIns = 1;
+            rightop = leftop;
+            leftop = "";
+        }
+        else if (!strcasecmp(opcode, "JNZ") || !strcasecmp(opcode, "JZ"))
+        {
+            flag_isJumpOrCallIns = 1;
+            sep = ", ";
+        }
+
+        if (flag_isJumpOrCallIns == 1 && labels_is_charstring(rightop))
+        {
+            address = labels_get_target(rightop);
+
+            if (address < 0)
+            {
+                fprintf(stderr, "Can not resolve label \"%s\".\n", rightop);
+                return FALSE;
+            }
+            fprintf(fout, "%s %s%s%d\n", opcode, leftop, sep, address + base_address);
+        }
+        else
+            fprintf(fout, "%s\n", line);
+    }
+
+    return TRUE;
 }
 
-void
-labels_random_name (char *name)
+/* Returns a random file name */
+void labels_random_name(char *name)
 {
-	srand (time(NULL));
-	sprintf (name, "tempfile.%d.xsm", rand());
+    srand(time(NULL));
+    sprintf(name, "tempfile.%d.xsm", rand());
 }
 
-int
-remove_newline_character (char *str,int length)
+/* Removes newline character */
+int remove_newline_character(char *str, int length)
 {
-	char *p = str;
-	int i=0;
+    int i;
+    char *p;
 
-	if(!str)
-		return FALSE;
+    i = 0;
+    p = str;
 
-	while (*p&&i<length)
-	{
-		if (*p=='\n'||*p=='\0')
-		{
-			*p='\0';
-			return TRUE;
-		}
-		i++;
-		p++;
-	}
+    if (!str)
+        return FALSE;
 
-	return FALSE;
+    while (*p && i < length)
+    {
+        if (*p == '\n' || *p == '\0')
+        {
+            *p = '\0';
+            return TRUE;
+        }
+        i++;
+        p++;
+    }
+
+    return FALSE;
 }

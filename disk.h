@@ -1,17 +1,19 @@
-#ifndef DISK_H
-#define DISK_H
+#ifndef XFS_DISK_H
+
+#define XFS_DISK_H
 
 #include "fileSystem.h"
+#include "exception.h"
 
-#define DISK_NAME 	"disk.xfs"
-#define BOOT_BLOCK	0
+#define DISK_NAME "disk.xfs"
 
 #define DISK_NO_FORMAT 0
 #define DISK_FORMAT 1
 
-typedef struct{
-	char word[BLOCK_SIZE][WORD_SIZE];
-}BLOCK;
+typedef struct
+{
+    char word[BLOCK_SIZE][WORD_SIZE];
+} BLOCK;
 
 int readFromDisk(int virtBlockNumber, int fileBlockNumber);
 int writeToDisk(int virtBlockNumber, int fileBlockNumber);

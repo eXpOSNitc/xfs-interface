@@ -8,6 +8,8 @@ disk.xfs
 *.txt
 *.tmp
 *.dSYM
+*.vscode/
+.DS_Store
 temp*
 test
 inodetable.txt
