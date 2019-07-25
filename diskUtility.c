@@ -845,7 +845,7 @@ int deleteLibraryFromDisk()
 int deleteFileFromDisk(char *name)
 {
     int i, max_num_blocks, locationOfInode;
-    int blockAddresses[max_num_blocks];
+    int blockAddresses[INODE_MAX_BLOCK_NUM];
 
     if (strcmp(name, "root") == 0)
     {
