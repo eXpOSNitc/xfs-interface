@@ -12,8 +12,6 @@ Functions for handling labels in XFS files.
 
 static label *_root;
 
-const int ins_length = XSM_INSTRUCTION_SIZE * XSM_WORD_SIZE + 1;
-
 /* Resets the labels */
 void labels_reset()
 {
@@ -93,7 +91,6 @@ void labels_insert(char *label_name, int address)
 /* Resolve labels */
 int labels_resolve(const char *filename, char *outfile, int base_address)
 {
-    int n;
     FILE *fin, *ftemp;
 
     fin = fopen(filename, "r");
@@ -124,18 +121,19 @@ int labels_resolve(const char *filename, char *outfile, int base_address)
 int labels_phase_one(FILE *fp)
 {
     int address;
-    char instruction[ins_length];
+    const int buffer_len = 100;
+    char line_buffer[buffer_len];
     char *label;
 
     address = 0;
     fseek(fp, 0, SEEK_SET);
 
-    while (fgets(instruction, ins_length, fp))
+    while (fgets(line_buffer, buffer_len, fp))
     {
-        remove_newline_character(instruction, ins_length);
-        if (labels_is_label(instruction))
+        remove_newline_character(line_buffer, buffer_len);
+        if (labels_is_label(line_buffer))
         {
-            label = labels_get_name(instruction);
+            label = labels_get_name(line_buffer);
             labels_insert(label, address);
         }
         else
@@ -149,11 +147,10 @@ int labels_phase_one(FILE *fp)
 int labels_phase_two(FILE *fin, FILE *fout, int base_address)
 {
     int address, flag_isJumpOrCallIns;
-    char line[100], instruction[100], instr[XSM_WORD_SIZE];
+    char line[100], instruction[100];
     char *opcode, *leftop, *rightop, *sep;
     const char *s = " ,";
 
-    address = 0;
     fseek(fin, 0, SEEK_SET);
 
     while (fgets(line, 100, fin))
