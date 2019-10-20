@@ -351,6 +351,13 @@ int writeFileToDisk(FILE *fp, int blockNum, int type)
         for (i = 0; i < BLOCK_SIZE; i++)
         {
             fgets(buffer1, 16, fp);
+	    for(j=0;buffer1[j]!='\0';j++)
+		if(j>=1 && buffer1[j]=='\n')
+			{
+				buffer1[j]='\0';
+				break;
+			}
+				
             strcpy(disk[TEMP_BLOCK].word[i], buffer1);
 
             if (feof(fp))
