@@ -94,7 +94,7 @@
 #define NO_OF_INODE_BLOCKS 2
 
 #define NO_OF_INTERRUPTS 18
-#define NO_OF_MODULES 8
+#define NO_OF_MODULES 10
 
 #define DATA_START_BLOCK 69
 #define NO_OF_DATA_BLOCKS 187
