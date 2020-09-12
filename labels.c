@@ -138,7 +138,7 @@ int labels_phase_one(FILE *fp)
             label = labels_get_name(instruction);
             labels_insert(label, address);
         }
-        else
+        else if (strlen(instruction) > 0)
             address += XSM_INSTRUCTION_SIZE;
     }
 
