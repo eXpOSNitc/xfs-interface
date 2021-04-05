@@ -10,6 +10,13 @@ Interface to access disk file.
 #include <sys/types.h>
 
 BLOCK *disk;
+/* path to disk.xfs */
+static const char* pathToDisk = NULL;
+
+void setPathToDisk(const char* path) {
+    pathToDisk = path;
+}
+
 
 /* Reads an entire block from fileBlockNumber on the disk to virtBlockNumber on the memory copy of the disk */
 int readFromDisk(int virtBlockNumber, int fileBlockNumber)
@@ -39,7 +46,7 @@ int writeToDisk(int virtBlockNumber, int fileBlockNumber)
 /* Opens the disk file and returns the file descriptor */
 int openDiskFile(int access)
 {
-    int fd = open(DISK_NAME, access, 0666);
+    int fd = open(pathToDisk, access, 0666);
     if (fd < 0)
         exception_throwException(EXCEPTION_CANT_OPEN_DISK);
 
@@ -52,9 +59,9 @@ void createDiskFile(int format)
     int fd;
 
     if (format == DISK_FORMAT)
-        fd = open(DISK_NAME, O_CREAT | O_TRUNC | O_SYNC, 0666);
+        fd = open(pathToDisk, O_CREAT | O_TRUNC | O_SYNC, 0666);
     else
-        fd = open(DISK_NAME, O_CREAT, 0666);
+        fd = open(pathToDisk, O_CREAT, 0666);
 
     if (fd < 0)
         exception_throwException(EXCEPTION_CANT_CREATE_DISK);

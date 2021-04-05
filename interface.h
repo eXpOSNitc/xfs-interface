@@ -8,6 +8,8 @@
 #define DO_NOT_FORMAT 0
 #define FORMAT 1
 
+#define DEFAULT_DISK_NAME "disk.xfs"
+
 void cli(int argc, char **argv);
 void runCommand(char command[]);
 char *xfs_cli_stripwhite(char *str);
