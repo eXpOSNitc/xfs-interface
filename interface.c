@@ -22,7 +22,7 @@ jmp_buf exp_point;
 void cli(int argc, char **argv)
 {
     int i, j;
-    char command[100], c;
+    char command[100], temp[100], c;
 
     if (argc > 1)
     {
@@ -31,7 +31,8 @@ void cli(int argc, char **argv)
         i = 2;
         while (i < argc)
         {
-            sprintf(command, "%s %s", command, argv[i]);
+            strcpy(temp, command);
+            sprintf(command, "%s %s", temp, argv[i]);
             i++;
         }
 
