@@ -724,10 +724,10 @@ int loadExecutableToDisk(char *name)
         return XFS_FAILURE;
     }
 
-    while (!feof(fileToBeLoaded))
-    {   
+    while (c != EOF)
+    {
         c = fgetc(fileToBeLoaded);
-        if (c == '\n' || c == EOF)
+        if (c == '\n')
             num_of_lines++;
     }
 
